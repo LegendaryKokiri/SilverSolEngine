@@ -1,0 +1,33 @@
+#version 330
+
+in vec2 pass_textureCoordinates;
+
+out vec4 out_Color;
+
+uniform sampler2D fontTextureAtlas;
+
+uniform vec3 fontColor;
+uniform float fontWidth;
+uniform float fontEdgeWidth;
+
+uniform vec3 borderColor;
+uniform float borderWidth;
+uniform float borderEdgeWidth;
+uniform vec2 borderOffset;
+
+void main(void) {
+	float distance = 1.0 - texture(fontTextureAtlas, pass_textureCoordinates).a;
+	float alpha = 1.0 - smoothstep(fontWidth - fontEdgeWidth, fontWidth, distance);
+	
+	float borderAlpha = 0.0;
+	if(borderWidth > 0.0) {
+		float borderEnd = fontWidth + borderWidth;
+		float borderDistance = 1.0 - texture(fontTextureAtlas, pass_textureCoordinates + borderOffset).a;
+		borderAlpha = 1.0 - smoothstep(borderEnd - borderEdgeWidth, borderEnd, borderDistance);
+	}
+	
+	float totalAlpha = alpha + (1.0 - alpha) * borderAlpha;
+	vec3 totalColor = mix(borderColor, fontColor, alpha / totalAlpha);
+	
+	out_Color = vec4(totalColor, totalAlpha);
+}
