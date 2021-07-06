@@ -9,11 +9,11 @@ public class HeightMapTerrain extends Terrain {
 	public HeightMapTerrain(float width, float height, float depth, float[][] heights) {
 		super();
 		
-		hasBody3d = true;
-		body3d = new Body();
-		body3d.setImmovable(true);
-		body3d.setMass(Float.POSITIVE_INFINITY);
-		body3d.addVolume(new Landscape(Type.SOLID, width, height, depth, heights, null));
+		Body body = new Body();
+		body.setImmovable(true);
+		body.setMass(Float.POSITIVE_INFINITY);
+		body.addVolume(new Landscape(Type.SOLID, width, height, depth, heights, null));
+		setBody(body);
 	}
 	
 }

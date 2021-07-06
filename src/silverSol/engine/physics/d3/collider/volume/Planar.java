@@ -1,8 +1,6 @@
 package silverSol.engine.physics.d3.collider.volume;
 
-import java.util.HashSet;
-import java.util.Set;
-
+import org.lwjgl.util.vector.Vector2f;
 import org.lwjgl.util.vector.Vector3f;
 
 import silverSol.engine.physics.d3.collision.Collision;
@@ -11,6 +9,7 @@ import silverSol.engine.physics.d3.det.narrow.algs.GJK;
 import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
 import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis.Resolution;
 import silverSol.math.PlaneMath;
+import silverSol.math.SegmentMath;
 import silverSol.math.VectorMath;
 
 public class Planar extends Volume {
@@ -19,7 +18,11 @@ public class Planar extends Volume {
 	
 	private Vector3f[] vertices;
 	private Vector3f normal;
-	private Set<Edge> edges;
+	
+	//PROJECTIONS (FOR RAYCASTING)
+	private Vector2f[] projectedVertices; 
+	private Vector3f basis1;
+	private Vector3f basis2;
 	
 	public Planar(Vector3f[] vertices, Type collisionType, Object colliderData) {
 		super(collisionType, colliderData);
@@ -30,9 +33,13 @@ public class Planar extends Volume {
 		normal = Vector3f.cross(Vector3f.sub(vertices[1], vertices[0], null), Vector3f.sub(vertices[2], vertices[0], null), null);
 		normal.normalise(normal);
 		
-		this.edges = new HashSet<>();
+		this.basis1 = new Vector3f();
+		this.basis2 = new Vector3f();
+		VectorMath.generateBasis(this.normal, this.basis1, this.basis2);
+		
+		this.projectedVertices = new Vector2f[vertices.length];
 		for(int i = 0; i < vertices.length; i++) {
-			edges.add(new Edge(this.vertices[i], this.vertices[(i+1)%vertices.length]));
+			this.projectedVertices[i] = project(vertices[i]);
 		}
 	}
 
@@ -82,18 +89,48 @@ public class Planar extends Volume {
 		Vector3f intersection = PlaneMath.rayIntersection(origin, direction, vertices[0], normal);
 		if(intersection == null) return null;
 		
-		Vector3f support = supportMap(intersection.normalise(null), false);
-		
 		Vector3f toPlane = Vector3f.sub(intersection, origin, null);
 		if(toPlane.lengthSquared() > maxLength * maxLength) return null;
 		
-		//If the point is within the boundaries of the shape, it can't be farther than the support in its direction.
-		if(intersection.lengthSquared() > Vector3f.dot(support, intersection)) return null;
+		Vector2f p = project(intersection);
+		boolean inShape = false;
+		
+		//Cast the ray (1,0) from the point and see how many edges it crosses.
+		//To avoid counting repeat edges on vertices, the intersection must be above the bottom point and left of the rightmost point
+		for(int i = 1; i <= projectedVertices.length; i++) {
+			Vector2f p1 = projectedVertices[i-1];
+			Vector2f p2 = projectedVertices[i % projectedVertices.length];
+			
+			//Is intersection point between the y-boundaries of the edge?
+			if(!(p1.y < p.y && p.y <= p2.y) && !(p2.y <= p.y && p.y < p1.y)) {
+				continue;
+			}
+			
+			//Is the edge vertical? If so, we can't do traditional slope calculations.
+			//TODO: We probably want to check within EPSILON rather than exact equality
+			if(p1.x == p2.x) {
+				if(p.x <= p1.x) inShape = !inShape;
+				continue;
+			}
+			
+			//Is the intersection point of the ray with the edge on the right of the intersection?
+			float slope = (p2.y - p1.y) / (p2.x - p1.x); //TODO: We could precompute slopes for a speedup.
+			float edgeX = (p.y - p1.y) / slope + p1.x;
+			if(edgeX <= p.x) continue;
+			
+			inShape = !inShape;
+		}
+		
+		if(!inShape) return null;
 		
 		if(global) return new Vector3f[]{toGlobalPosition(intersection), toGlobalDirection(normal)};
 		return new Vector3f[]{intersection, new Vector3f(normal)};
 	}
 
+	private Vector2f project(Vector3f v) {
+		return new Vector2f(Vector3f.dot(this.basis1, v), Vector3f.dot(this.basis2, v));
+	}
+	
 	@Override
 	public Collision[] testForCollisions(Volume volume) {
 		if(volume instanceof Landscape) return volume.testForCollisions(this);
@@ -108,14 +145,14 @@ public class Planar extends Volume {
 	
 	@Override
 	public SeparatingAxis[] getSeparatingAxes(Volume other) {
-		SeparatingAxis axes[] = new SeparatingAxis[edges.size() + 1];
+		SeparatingAxis axes[] = new SeparatingAxis[vertices.length + 1];
 		axes[0] = new SeparatingAxis(this.toGlobalDirection(normal), Resolution.FORWARD);
 		
 		int index = 1;
-		for(Edge edge : edges) {
+		for(int i = 1; i <= vertices.length; i++) {
 			//TODO: Having a set of normalised edges would speed this up by saving us from having to normalise.
 			//TODO: Better yet, we can just precompute the separating axes in local space and globalize them
-			Vector3f local = Vector3f.cross(normal, Vector3f.sub(edge.v2, edge.v1, null), null).normalise(null);
+			Vector3f local = Vector3f.cross(normal, Vector3f.sub(vertices[i % vertices.length], vertices[i-1], null), null).normalise(null);
 			axes[index++] = new SeparatingAxis(this.toGlobalDirection(local), Resolution.NONE);
 		}
 		
@@ -144,24 +181,6 @@ public class Planar extends Volume {
 		}
 		
 		return true;
-	}
-	
-	public boolean sharesEdgeWith(Planar p) {
-		for(Edge edge : p.edges) {
-			if(edges.contains(edge)) return true;
-		}
-		
-		return false;
-	}
-	
-	public boolean makesFaceWith(Planar p) {
-		if(Vector3f.dot(normal, p.normal) < 1 - EPSILON) return false;
-		
-		for(Edge edge : p.edges) {
-			if(edges.contains(edge.getReverse())) return true;
-		}
-		
-		return false;
 	}
 	
 	public static void main(String[] args) {

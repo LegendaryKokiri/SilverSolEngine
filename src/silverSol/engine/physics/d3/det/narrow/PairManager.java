@@ -35,8 +35,8 @@ public class PairManager {
 						if(!collider1.filterCollision(collision)) continue;
 						if(!collider2.filterCollision(collision)) continue;
 						
-						collider1.getBody().addCollision(collision);
-						collider2.getBody().addCollision(collision);
+						collider1.addCollision(collision);
+						collider2.addCollision(collision);
 						collisions.add(collision);
 					}
 				}

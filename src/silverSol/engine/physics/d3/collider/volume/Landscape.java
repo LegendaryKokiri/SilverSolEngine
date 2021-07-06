@@ -2,10 +2,7 @@ package silverSol.engine.physics.d3.collider.volume;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
 
 import org.lwjgl.util.vector.Vector2f;
 import org.lwjgl.util.vector.Vector3f;
@@ -17,15 +14,13 @@ import silverSol.engine.physics.d3.det.narrow.algs.GJK;
 import silverSol.engine.physics.d3.det.narrow.algs.SAT;
 import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
 import silverSol.math.MatrixMath;
+import silverSol.math.NumberMath;
 import silverSol.math.VectorMath;
 
 public class Landscape extends Volume {
 	
-	private static final Vector3f LEFT_VECTOR = new Vector3f(-1f, 0f, 0f);
-	private static final Vector3f RIGHT_VECTOR = new Vector3f(1f, 0f, 0f);
-	private static final Vector3f FRONT_VECTOR = new Vector3f(0f, 0f, 1f);
-	private static final Vector3f BACK_VECTOR = new Vector3f(0f, 0f, -1f);
-		
+	private static final float EPSILON = 1E-3f;
+	
 	private float width, depth, height;
 	private float halfWidth, halfDepth, halfHeight;
 	private float gridSizeX, gridSizeZ;
@@ -85,11 +80,14 @@ public class Landscape extends Volume {
 			t[1] = new Vector3f(rightX, heights[gridX + 1][gridZ + 1], frontZ);
 			t[2] = new Vector3f(rightX, heights[gridX + 1][gridZ], backZ);
 		}
+		
+//		System.out.println("Planar from " + leftX + " - " + rightX + ", " + backZ + " - " + frontZ + " (" + upperLeft + ")");
 				
 		Vector3f centroid = VectorMath.mean(t[0], t[1], t[2]);
 		Vector3f.sub(t[0], centroid, t[0]);
 		Vector3f.sub(t[1], centroid, t[1]);
 		Vector3f.sub(t[2], centroid, t[2]);
+//		System.out.println("Centroid = " + centroid);
 				
 		Planar planar = new Planar(new Vector3f[]{t[0], t[1], t[2]}, Type.SOLID, null);
 		planar.setBodyOffset(MatrixMath.createTransformation(centroid, new Vector3f(), new Vector3f(1f, 1f, 1f)));
@@ -111,8 +109,7 @@ public class Landscape extends Volume {
 	
 	@Override
 	public Vector3f supportMap(Vector3f globalDirection, boolean global) {
-		Vector3f support = new Vector3f();
-		return global ? this.toGlobalPosition(support) : support;
+		return global ? this.toGlobalPosition(new Vector3f()) : new Vector3f();
 	}
 
 	@Override
@@ -120,99 +117,103 @@ public class Landscape extends Volume {
 		Vector3f origin = toLocalPosition(globalOrigin);
 		Vector3f direction = toLocalDirection(globalDirection);
 		
-		//a ---c---> b
-		float aLength = 0f;
-		float bLength = maxLength;
+		//Planar Selection
+		int gridX = getGridX(origin.x);
+		int gridZ = getGridZ(origin.z);
+		int gridStepX = (int) Math.signum(direction.x);
+		int gridStepZ = (int) Math.signum(direction.z);
 		
-		Vector3f a = new Vector3f(origin);
-		Vector3f b = new Vector3f(Vector3f.add(a, VectorMath.mul(direction, bLength, null), null));
-		Vector3f c = new Vector3f();
+		//Next Planar Selection
+		float nextX = getNext(origin.x, direction.x, halfWidth, gridSizeX);
+		float nextZ = getNext(origin.z, direction.z, halfDepth, gridSizeZ);
 		
-		while(true) {
-			float aHeight = getHeight(a.x, a.z);
-			if(a.y < aHeight) return null;
+		//Parametrization
+		float t = 0f;
+		float tToX = Float.isNaN(nextX) ? Float.POSITIVE_INFINITY : (nextX - origin.x) / direction.x;
+		float tToZ = Float.isNaN(nextZ) ? Float.POSITIVE_INFINITY : (nextZ - origin.z) / direction.z;
+		float tStepX = Math.abs(gridSizeX / direction.x);
+		float tStepZ = Math.abs(gridSizeZ / direction.z);
+//		float tStepDiagonal = ;
 		
-			float bHeight = getHeight(b.x, b.z);
-			if(b.y > bHeight) return null;
+		Vector3f[] intersection = null;
+		
+		while(t < maxLength) {
+			boolean validSquare = validGridX(gridX) && validGridZ(gridZ);
 			
-			int aGridX = getGridX(a.x);
-			if(aGridX == -1 || aGridX == heights[0].length - 1) return null;
+			if(validSquare) {
+				Planar p = generatePlanar(gridX, gridZ, true);
+				intersection = p.raycast(origin, direction, maxLength, true); //TODO: Did we really construct the planars such that origin and direction would be considered local?
 			
-			int bGridX = getGridX(b.x);
-			if(bGridX == -1 || bGridX == heights[0].length - 1) return null;
-			
-			if(aGridX != bGridX) {
-				float midLength = getMidLength(aLength, bLength);
-				c.set(getRayPoint(origin, direction, midLength));
-				float cHeight = getHeight(c.x, c.z);
+				if(intersection != null) {
+					if(global) return new Vector3f[]{toGlobalPosition(intersection[0]), toGlobalDirection(intersection[1])};
+					return intersection;
+				}
 				
-				if(c.y < cHeight) {
-					bLength = midLength;
-					b.set(c);
-					continue;
-				} else {
-					aLength = midLength;
-					a.set(c);
-					continue;
+				p = generatePlanar(gridX, gridZ, false);
+				intersection = p.raycast(origin, direction, maxLength, true); //TODO: Did we really construct the planars such that origin and direction would be considered local?
+			
+				if(intersection != null) {
+					if(global) return new Vector3f[]{toGlobalPosition(intersection[0]), toGlobalDirection(intersection[1])};
+					return intersection;
 				}
 			}
 			
-			int aGridZ = getGridZ(a.z);
-			if(aGridZ == -1 || aGridZ == heights[0].length - 1) return null;
+			float tToNext = Math.min(tToX, tToZ);
 			
-			int bGridZ = getGridZ(b.z);
-			if(bGridZ == -1 || bGridZ == heights[0].length - 1) return null;
-			
-			if(aGridZ != bGridZ) {
-				float midLength = getMidLength(aLength, bLength);
-				c.set(getRayPoint(origin, direction, midLength));
-				float cHeight = getHeight(c.x, c.z);
-				
-				if(c.y < cHeight) {
-					bLength = midLength;
-					b.set(c);
-					continue;
-				} else {
-					aLength = midLength;
-					a.set(c);
-					continue;
-				}
+			if(tToX == tToNext) {
+				gridX += gridStepX;
+				tToX += tStepX;
 			}
 			
-			boolean aLeft = upperLeft(a.x, a.z);
-			boolean bLeft = upperLeft(b.x, b.z);
-			
-			if(aLeft != bLeft) {
-				float midLength = getMidLength(aLength, bLength);
-				c.set(getRayPoint(origin, direction, midLength));
-				float cHeight = getHeight(c.x, c.z);
-				
-				if(c.y < cHeight) {
-					bLength = midLength;
-					b.set(c);
-					continue;
-				} else {
-					aLength = midLength;
-					a.set(c);
-					continue;
-				}
+			if(tToZ == tToNext) {
+				gridZ += gridStepZ;
+				tToZ += tStepZ;
 			}
 			
-			Planar planar = generatePlanar(aGridX, aGridZ, aLeft);			
-			Vector3f[] intersection = planar.raycast(origin, direction, maxLength, true);
-			if(intersection == null) return null;
+			t += tToNext;
+			tToX -= tToNext;
+			tToZ -= tToNext;
 			
-			if(global) return new Vector3f[]{toGlobalPosition(intersection[0]), toGlobalDirection(intersection[1])};
-			return intersection;
+			if(t < 0f) return null;			
 		}
+		
+		return null;
 	}
 	
-	private float getMidLength(float aLength, float bLength) {
-		return aLength + (bLength - aLength) * 0.5f;
+	/**
+	 * Returns the local-space coordinate of the grid edge in the negative direction
+	 * of the origin point, or of the origin point if it lies on the edge.
+	 * @param origin The coordinate to check
+	 * @param halfDimension Half of the length of the landscape along this dimension
+	 * @param gridSize The size of each grid square in this dimension
+	 * @return The local-space coordinate of the grid edge in the negative direction
+	 */
+	private float getEdge(float origin, float halfDimension, float gridSize) {
+		int n = (int) ((origin + halfDimension) / gridSize);
+		return -halfDimension + gridSize * n;
 	}
 	
-	private Vector3f getRayPoint(Vector3f origin, Vector3f direction, float length) {
-		return Vector3f.add(origin, VectorMath.mul(direction, length, null), null);
+	/**
+	 * Returns the local-space coordinate of the next grid edge in the passed direction
+	 * relative to the origin point.
+	 * @param origin The coordinate to check
+	 * @param direction The direction along this axis to check for the next edge
+	 * @param halfDimension Half of the length of the landscape along this dimension
+	 * @param gridSize The size of each grid square in this dimension
+	 * @return The local-space coordinate of the grid edge in the negative direction
+	 */
+	private float getNext(float origin, float direction, float halfDimension, float gridSize) {
+		float dirSign = Math.signum(direction);
+		if(dirSign == 0f) return Float.NaN;
+		
+		/* To get the exact grid position, we want to round up or increment for direction > 0
+		 and round down or decrement for direction < 0*/
+		float gridSteps = (origin + halfDimension) / gridSize;
+		if(dirSign > 0) gridSteps += 1f;
+		else if(dirSign < 0 && gridSteps % 1f == 0f) gridSteps -= 1f;
+		int n = (int) gridSteps;
+		
+		return -halfDimension + gridSize * n;
 	}
 	
 	@Override
@@ -231,6 +232,7 @@ public class Landscape extends Volume {
 		for(int i = 0; i < c.length; i++) {
 			c[i] = collisions.get(i);
 		}
+		
 		return c;
 	}
 	
@@ -239,49 +241,22 @@ public class Landscape extends Volume {
 		if(volume instanceof Landscape) return null;
 		
 		List<Planar> triangles = getTestPlanars(volume);
+		
 		if(triangles.size() == 0) return null;
 		
 		List<Collision> collisions = new ArrayList<>();
-		Map<Collision, Planar> colToPlanar = new HashMap<>();
-		
-		PriorityQueue<Collision> colPQ = new PriorityQueue<>(triangles.size(), depthComparator);
-		
+				
 		for(Planar triangle : triangles) {
 			Collision collision = testResolution(volume, triangle);
-			if(collision != null) {
-				collisions.add(collision);
-				colPQ.add(collision);
-				colToPlanar.put(collision, triangle);
-			}
+			if(collision != null) collisions.add(collision);
 		}
 		
 		Collision[] c = new Collision[collisions.size()];
 		for(int i = 0; i < c.length; i++) {
 			c[i] = collisions.get(i);
 		}
+		
 		return c;
-		
-		/*
-		List<Collision> cpqList = new ArrayList<>();
-		List<Planar> cpqPlanars = new ArrayList<>();
-		
-		iter: while(!colPQ.isEmpty()) {
-			Collision collision = colPQ.poll();
-//			System.out.println("Landscape.testForResolutions(): Iterating over collision with normal " + collision.getSeparatingAxis(volume) + " and depth " + collision.getPenetrationDepth() + ")");
-			Planar planar = colToPlanar.get(collision);
-			
-			for(Planar p : cpqPlanars) {
-				if(planar.convexTo(p) || planar.makesFaceWith(p)) {
-					continue iter;
-				}				
-			}
-			
-			cpqList.add(collision);
-			cpqPlanars.add(planar);
-		}
-		
-		return cpqList.toArray(new Collision[0]);
-		*/
 	}
 	
 	private Collision testCollision(Volume volume, Planar planar) {
@@ -291,54 +266,7 @@ public class Landscape extends Volume {
 	
 	private Collision testResolution(Volume volume, Planar planar) {
 		Collision collision = SAT.run(planar, volume);
-		
-		/*
-		if(GJK.detect(volume, planar) == null) return null;
-		
-		Vector3f[] p = planar.getVertices();
-		Vector3f[] vertices = new Vector3f[p.length * 2];
-		Vector3f normal = planar.getNormal();
-		Vector3f nNormal = normal.negate(null);
-		
-		Vector3f top = volume.supportMap(normal, true);
-		Vector3f bottom = volume.supportMap(nNormal, true);
-		float topLength = Vector3f.dot(Vector3f.sub(top, p[0], null), normal) + 1f;
-		float bottomLength = Vector3f.dot(Vector3f.sub(bottom, p[0], null), nNormal) + 1f;
-		Vector3f topNormal = VectorMath.mul(normal, topLength, null);
-		Vector3f bottomNormal = VectorMath.mul(nNormal, bottomLength, null);
-		
-		for(int i = 0; i < p.length; i++) {
-			Vector3f v = planar.getVertices()[i];
-			vertices[i * 2] = Vector3f.add(v, topNormal, null);
-			vertices[i * 2 + 1] = Vector3f.add(v, bottomNormal, null);
-		}
-		
-		Hull hull = new Hull(vertices, new int[0], this.getType(), null);
-		hull.setBodyOffset(planar.getBodyOffset());
-		hull.setBody(this.body);
-		
-		Collision collision = EPA.run(GJK.run(volume, hull), volume, hull);	
-//		Collision collision = EPA.run(GJK.run(volume, planar), volume,  planar);
-		*/
-		
 		if(collision == null) return null;
-		
-		/*
-		Vector3f globalA = collision.getGlobalContactA();
-		Vector3f rayOrigin = planar.toLocalPosition(globalA);
-		Vector3f intersection = PlaneMath.rayIntersection(rayOrigin, normal, p[0], normal);
-		if(intersection == null) return null;
-		
-		Vector3f localB = toLandscapeLocal(planar, intersection);
-//		Vector3f localB = toLandscapeLocal(planar, collision.getLocalContactB());
-		Vector3f globalB = this.toGlobalPosition(localB);
-		
-		Vector3f lNormal = planar.toGlobalDirection(normal);
-		collision.setSeparatingAxis(lNormal.negate(null)); //Negate to maintain A into B convention
-		collision.setPenetrationDepth(Vector3f.dot(Vector3f.sub(globalA, globalB, null), lNormal));
-		collision.setContactB(localB, globalB);			
-		collision.setColliderB(this);
-		*/
 		
 		Vector3f localA = toLandscapeLocal(planar, collision.getLocalContactB());
 		Vector3f globalA = this.toGlobalPosition(localA);
@@ -356,10 +284,10 @@ public class Landscape extends Volume {
 	private List<Planar> getTestPlanars(Volume volume) {
 		List<Planar> planars = new ArrayList<>();
 		
-		Vector3f leftPosition = volume.supportMap(LEFT_VECTOR, true);
-		Vector3f rightPosition = volume.supportMap(RIGHT_VECTOR, true);
-		Vector3f frontPosition = volume.supportMap(FRONT_VECTOR, true);
-		Vector3f backPosition = volume.supportMap(BACK_VECTOR, true);
+		Vector3f leftPosition = toLocalPosition(volume.supportMap(MatrixMath.getRight(body.getTransformation()), true));
+		Vector3f rightPosition = toLocalPosition(volume.supportMap(MatrixMath.getLeft(body.getTransformation()), true));
+		Vector3f backPosition = toLocalPosition(volume.supportMap(MatrixMath.getBackward(body.getTransformation()), true));
+		Vector3f frontPosition = toLocalPosition(volume.supportMap(MatrixMath.getForward(body.getTransformation()), true));
 		
 		int xMin = getGridX(leftPosition.x);	
 		int xMax = getGridX(rightPosition.x);
@@ -370,13 +298,11 @@ public class Landscape extends Volume {
 		int rightIndex = upperLeft(rightPosition.x, frontPosition.z) ? 0 : 1;
 		int startX = xMin * 2 + leftIndex;
 		int endX = xMax * 2 + rightIndex;
-		
-		for(int z = zMin; z <= zMax; z++) {
-			if(z < 0) continue;
-			if(z >= heights[0].length - 1) break;
-			for(int x = startX; x <= endX; x++) {
-				if(x < 0) continue;
-				if(x >= (heights.length - 1) * 2) break;
+				
+		for(int z = NumberMath.max(0, zMin); z <= zMax; z++) {
+			if(z >= zPoints - 1) break;
+			for(int x = NumberMath.max(0, startX); x <= endX; x++) {
+				if(x >= (xPoints - 1) * 2) break;
 				planars.add(generatePlanar(x / 2, z, x % 2 == 0));
 			}
 		}
@@ -384,57 +310,66 @@ public class Landscape extends Volume {
 		return planars;
 	}
 	
+	private boolean validGridX(int gridX) {
+		return -1 < gridX && gridX < xPoints - 1;
+	}
+	
+	private boolean validGridZ(int gridZ) {
+		return -1 < gridZ && gridZ < zPoints - 1;
+	}
+	
 	//TODO: xPosition needs to be localized with respect to the Landscape for this to work with any input. Make sure all calls localize.
 	private int getGridX(float localX) {
-		float x = localX - position.x + halfWidth;
-		int gridX = (int) Math.floor(x / gridSizeX);
+		int gridX = (int) ((localX + halfWidth) / gridSizeX);
 		if(gridX < 0) return -1;
-		if(gridX >= heights.length - 1) return heights.length - 1;
+		if(gridX >= xPoints - 1) return xPoints - 1;
 		return gridX;
 	}
 	
 	//TODO: zPosition needs to be localized with respect to the Landscape for this to work with any input. Make sure all calls localize.
 	private int getGridZ(float localZ) {
-		float z = localZ - position.z + halfDepth;
-		int gridZ = (int) Math.floor(z / gridSizeZ);
+		int gridZ = (int) ((localZ + halfDepth) / gridSizeZ);
 		if(gridZ < 0) return -1;
-		if(gridZ >= heights[0].length - 1) return heights[0].length - 1;
+		if(gridZ >= zPoints - 1) return zPoints - 1;
 		return gridZ;
+	}
+	
+	private float getGridSpaceX(float localX) {
+		return localX - getEdge(localX, halfWidth, gridSizeX);
+	}
+	
+	private float getGridSpaceZ(float localZ) {
+		return localZ - getEdge(localZ, halfDepth, gridSizeZ);
 	}
 	
 	//TODO: x and z need to be localized with respect to the Landscape for this to work with any input. Make sure all calls localize.
 	private boolean upperLeft(float localX, float localZ) {
-		float xCoordinate = (localX + halfWidth) % gridSizeX / gridSizeX;
-		float zCoordinate = (localZ + halfDepth) % gridSizeZ / gridSizeZ;
+		float xCoordinate = getGridSpaceX(localX);
+		float zCoordinate = getGridSpaceZ(localZ);
 		return upperLeftCoords(xCoordinate, zCoordinate);
 	}
 	
-	private boolean upperLeftCoords(float xCoordinate, float zCoordinate) {
-		return xCoordinate <= 1f - zCoordinate;
+	private boolean upperLeftCoords(float gridSpaceX, float gridSpaceZ) {
+		return (gridSpaceX / gridSizeX) <= 1f - (gridSpaceZ / gridSizeZ);
 	}
 	
 	//TODO: x and z need to be localized with respect to the Landscape for this to work with any input. Make sure all calls localize.
-	public float getHeight(float localX, float localZ) {
-		float x = localX - position.x + halfWidth;
-		float z = localZ - position.z + halfDepth;
-						
-		int gridX = (int) Math.floor(x / gridSizeX);
-		int gridZ = (int) Math.floor(z / gridSizeZ);
+	public float getHeight(float localX, float localZ) {					
+		int gridX = getGridX(localX);
+		int gridZ = getGridZ(localZ);
 		
 		if(gridX >= xPoints - 1 || gridZ >= zPoints - 1|| gridX < 0 || gridZ < 0) return Float.NaN;
 		
-		float xCoordinate = x % gridSizeX / gridSizeX;
-		float zCoordinate = z % gridSizeZ / gridSizeZ;
-		Vector2f pollCoordinates = new Vector2f(xCoordinate, zCoordinate);
-				
 		float height = Float.NaN;
-		if(xCoordinate <= 1 - zCoordinate) {
+		Vector2f gridSpaceCoords = new Vector2f(getGridSpaceX(localX) / gridSizeX, getGridSpaceZ(localZ) / gridSizeZ);
+		
+		if(gridSpaceCoords.x <= 1 - gridSpaceCoords.y) {
 			height = barryCentric3D(new Vector3f(0, heights[gridX][gridZ], 0), new Vector3f(1, heights[gridX + 1][gridZ], 0),
-					new Vector3f(0, heights[gridX][gridZ + 1], 1), pollCoordinates);
+					new Vector3f(0, heights[gridX][gridZ + 1], 1), gridSpaceCoords);
 		} else {
 			height = barryCentric3D(new Vector3f(1, heights[gridX + 1][gridZ], 0),
 					new Vector3f(1, heights[gridX + 1][gridZ + 1], 1), new Vector3f(0, heights[gridX][gridZ + 1], 1),
-					pollCoordinates);
+					gridSpaceCoords);
 		}
 		
 		return height;
@@ -461,7 +396,7 @@ public class Landscape extends Volume {
 	public void setWidth(float width) {
 		this.width = width;
 		this.halfWidth = width * 0.5f;
-		this.gridSizeX = (heights.length > 0) ? width / (float)(heights.length - 1) : 0;
+		this.gridSizeX = (xPoints > 0) ? width / (float)(xPoints - 1) : 0;
 	}
 
 	public float getDepth() {
@@ -471,7 +406,7 @@ public class Landscape extends Volume {
 	public void setDepth(float depth) {
 		this.depth = depth;
 		this.halfDepth = depth * 0.5f;
-		this.gridSizeZ = (heights.length > 0) ? depth / (float)(heights[0].length - 1) : 0;
+		this.gridSizeZ = (zPoints > 0) ? depth / (float)(zPoints - 1) : 0;
 	}
 	
 	public float getHeight() {
@@ -480,8 +415,8 @@ public class Landscape extends Volume {
 	
 	public void setHeight(float height) {
 		float scale = height / this.height;
-		for(int i = 0; i < heights.length; i++) {
-			for(int j = 0; j < heights[0].length; j++) {
+		for(int i = 0; i < xPoints; i++) {
+			for(int j = 0; j < zPoints; j++) {
 				heights[i][j] *= scale;
 			}
 		}
@@ -495,25 +430,59 @@ public class Landscape extends Volume {
 	}
 	
 	public static void main(String[] args) {
-		Body terrainBody = new Body();
-		Landscape landscape = new Landscape(Type.SOLID, 2f, 1f, 10f, new float[][]{{1f,1f,10f,10f},{1f,1f,10f,10f}}, null);
+		//TODO: Modify the landscape such that the height indices correspond to what you visually see when making such a 2-D array as heights
+		Landscape landscape = new Landscape(Type.SOLID, 10f, 40f, 10f, new float[][]{
+			{0f,0f,0f,0f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,0f,0f,0f,0f}}, null);
 		landscape.setID(2);
+		
+		Body terrainBody = new Body();
 		terrainBody.addVolume(landscape);
 		
+		/*
 		Body sphereBody = new Body();
 		Sphere sphere = new Sphere(1f, Type.SOLID, null);
 		sphere.setID(1);
 		sphereBody.addVolume(sphere);
-		sphereBody.setPosition(0.5f, 5f, -0.5f);
-		
+		sphereBody.setPosition(-2f, 10.9f, 0f);
+				
 		Collision[] collisions = landscape.testForResolutions(sphere);
-		if(collisions == null) return;
 		
-		for(Collision collision : collisions) {
-			System.out.println(collision + " with normal " + collision.getSeparatingAxis(sphere) + " and depth " + collision.getPenetrationDepth());
-			System.out.println(collision.getColliderA());
-			System.out.println("Global A: " + collision.getGlobalContactA());
-			System.out.println("Global B: " + collision.getGlobalContactB());
+		if(collisions != null) {
+			for(Collision collision : collisions) {
+				System.out.println(collision + " with normal " + collision.getSeparatingAxis(sphere) + " and depth " + collision.getPenetrationDepth());
+				System.out.println(collision.getColliderA());
+				System.out.println("Global A: " + collision.getGlobalContactA());
+				System.out.println("Global B: " + collision.getGlobalContactB());
+			}
+		}
+		*/
+		
+		/*
+		Vector2f[] pollPoints = new Vector2f[] {new Vector2f(-4.9f, -4.9f), new Vector2f(-1.8f, -1.8f), new Vector2f(-1.5f, -3.633f)};
+		for(Vector2f poll : pollPoints) System.out.println("Upper Left? " + landscape.upperLeft(poll.x, poll.y));
+		*/
+		
+		Vector3f testCases[][] = new Vector3f[][] {
+			{new Vector3f(4f, 9f, -9f), new Vector3f(0f, 0f, 1f)},
+			{new Vector3f(0f, 15f, 5.01f), new Vector3f(0f, 0f, -1f)},
+			{new Vector3f(0f, 50f, 0f), new Vector3f(0f, -1f, 0f)}};
+		
+		
+		Vector3f intersection[] = null;
+		int i = 1;
+		for(Vector3f[] testCase : testCases) {
+			System.out.println("---Test Case " + i + "---");
+			
+			intersection = landscape.raycast(testCase[0], testCase[1], 20f, true);
+			
+			if(intersection == null) {
+				System.out.println("Raycast collided with nothing");
+			} else {
+				System.out.println("Raycast intersection point = " + intersection[0]);
+				System.out.println("\tNormal = " + intersection[1]);
+			}
+			
+			System.out.println("===End of Case " + i++ + "===\n");
 		}
 	}
 	

@@ -25,6 +25,7 @@ public abstract class Volume extends Collider {
 		ETHEREAL, SENSOR, SENSOR_PLUS, SOLID
 	}
 	
+	//TODO: For applications such as animation with scale, we need to be able to track scale here, too.
 	//Transformation
 	protected Vector3f position;
 	protected Quaternion rotation;
@@ -45,16 +46,13 @@ public abstract class Volume extends Collider {
 	}
 	
 	private void init(Type collisionType) {
-		position = new Vector3f();
-		rotation = new Quaternion();
-		transformation = new Matrix4f();
+		this.position = new Vector3f();
+		this.rotation = new Quaternion();
+		this.transformation = new Matrix4f();
 		
-		hasBody = false;
-		
-		type = collisionType;
-		immovable = true;
-		
-		restitution = 1f;
+		this.type = collisionType;
+		this.immovable = true;
+		this.restitution = 1f;
 	}
 	
 	@Override

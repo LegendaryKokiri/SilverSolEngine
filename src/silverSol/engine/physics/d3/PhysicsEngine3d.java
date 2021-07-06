@@ -36,6 +36,7 @@ public class PhysicsEngine3d {
 	
 	//Bodies
 	private List<Body> bodies;
+	private List<Collider> colliders;
 	
 	//Collision
 	private CollisionDetection collisionDetection;
@@ -49,11 +50,12 @@ public class PhysicsEngine3d {
 		targetDT = 1f / (float) fps;
 		numIterations = 1;
 				
-		unitsPerMeter = 1;
+		unitsPerMeter = 1f;
 		
 		defaultGravity = new Vector3f(0f, 9.8f, 0f);
 		
 		bodies = new ArrayList<>();
+		colliders = new ArrayList<>();
 		
 		collisionDetection = new CollisionDetection();
 		collisionResolution = new CollisionResolution();
@@ -107,6 +109,33 @@ public class PhysicsEngine3d {
 		}
 	}
 	
+	public void addCollider(Collider collider) {
+		processCollider(collider);
+		colliders.add(collider);
+	}
+	
+	private void processCollider(Collider collider) {
+		if(collider == null) return;
+		if(collider.getID() == Volume.DEFAULT_ID) collisionDetection.addCollider(collider);
+	}
+	
+	private void removeBody(Body body) {
+		for(Volume volume : body.getVolumes()) {
+			removeCollider(volume);
+		}
+		
+		for(Ray ray : body.getRays()) {
+			removeCollider(ray);
+		}
+		
+		bodies.remove(body);
+	}
+	
+	public void removeCollider(Collider collider) {
+		collisionDetection.removeCollider(collider);
+		colliders.remove(collider);
+	}
+	
 	private void clean() {
 		for(int i = 0; i < bodies.size(); i++) {
 			if(bodies.get(i).shouldRemove()) {
@@ -123,31 +152,6 @@ public class PhysicsEngine3d {
 		}
 	}
 	
-	private void removeBody(Body body) {
-		for(Volume volume : body.getVolumes()) {
-			removeVolume(volume);
-		}
-		
-		for(Ray ray : body.getRays()) {
-			removeRay(ray);
-		}
-		
-		bodies.remove(body);
-	}
-	
-	private void removeVolume(Volume volume) {
-		collisionDetection.removeCollider(volume);
-	}
-	
-	private void removeRay(Ray ray) {
-		collisionDetection.removeCollider(ray);
-	}
-	
-	private void processCollider(Collider collider) {
-		if(collider == null) return;
-		if(collider.getID() == Volume.DEFAULT_ID) collisionDetection.addCollider(collider);
-	}
-	
 	private void preSolve() {
 		for(Body body : bodies) {
 			if(!body.isImmovable() && !body.isGravityImmune()) body.addLinearAcceleration(body.getGravity());
@@ -156,6 +160,10 @@ public class PhysicsEngine3d {
 		
 		for(Body body : bodies) {
 			body.clearCollisions();
+		}
+		
+		for(Collider collider : colliders) {
+			collider.clearCollisions();
 		}
 	}
 	
@@ -191,6 +199,7 @@ public class PhysicsEngine3d {
 	public void clearBodies() {
 		collisionDetection.clearData();
 		bodies.clear();
+		colliders.clear();
 		constraints.clear();
 	}
 	

@@ -5,6 +5,8 @@ import java.util.List;
 
 import silverSol.engine.physics.d3.body.Body;
 import silverSol.engine.physics.d3.collider.Collider;
+import silverSol.engine.physics.d3.collider.ray.Ray;
+import silverSol.engine.physics.d3.collider.volume.Volume;
 import silverSol.engine.physics.d3.collision.Collision;
 import silverSol.engine.physics.d3.det.broad.BroadPhase;
 import silverSol.engine.physics.d3.det.narrow.NarrowPhase;
@@ -41,7 +43,8 @@ public class CollisionDetection {
 	private void storeCollisions(List<Body> bodies) {
 		collisions.clear();
 		for(Body body : bodies) {
-			collisions.addAll(body.getCollisions());
+			for(Volume volume : body.getVolumes()) collisions.addAll(volume.getCollisions());
+			for(Ray ray : body.getRays()) collisions.addAll(ray.getCollisions());
 		}
 	}
 	

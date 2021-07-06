@@ -3,6 +3,7 @@ package silverSol.engine.physics.d3.collision;
 import org.lwjgl.util.vector.Vector3f;
 
 import silverSol.engine.physics.d3.collider.Collider;
+import silverSol.math.VectorMath;
 
 public class Collision {
 	
@@ -143,11 +144,7 @@ public class Collision {
 	}
 	
 	private void calculateTangents() {
-		if(separatingAxis.x >= 0.57735f) tangent1.set(separatingAxis.y, -separatingAxis.x, 0f);
-		else tangent1.set(0f, separatingAxis.z, -separatingAxis.y);
-		tangent1.normalise(tangent1);
-		
-		tangent2.set(Vector3f.cross(separatingAxis, tangent1, null));
+		VectorMath.generateBasis(separatingAxis, tangent1, tangent2);
 	}
 	
 	public Vector3f getTangent1() {

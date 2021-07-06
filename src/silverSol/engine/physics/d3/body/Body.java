@@ -67,7 +67,6 @@ public class Body {
 	private Matrix3f inertiaTensor;
 	
 	//Collisions
-	private List<Collision> collisions;
 	private List<CollisionMod> modifiers;
 	
 	public Body() {		
@@ -76,7 +75,6 @@ public class Body {
 		this.position = new Vector3f();
 		this.rotation = new Quaternion();
 		this.scale = new Vector3f(1f, 1f, 1f);
-		
 		this.transformation = new Matrix4f();
 				
 		this.volumes = new ArrayList<>();
@@ -98,7 +96,6 @@ public class Body {
 		this.inertiaTensor.m11 = Float.POSITIVE_INFINITY;
 		this.inertiaTensor.m22 = Float.POSITIVE_INFINITY;
 		
-		this.collisions = new ArrayList<>();
 		this.modifiers = new ArrayList<>();
 	}
 	
@@ -428,10 +425,6 @@ public class Body {
 		return collider.getBody() == this;
 	}
 	
-	public List<Collision> getCollisions() {
-		return collisions;
-	}
-	
 	public List<CollisionMod> getModifiers() {
 		return modifiers;
 	}
@@ -456,10 +449,6 @@ public class Body {
 		return new Constraint[]{new LinearSeparate(collision)};
 	}
 	
-	public void addCollision(Collision collision) {
-		collisions.add(collision);
-	}
-	
 	//TODO: Restore persistent contacts
 	/*
 	public void clearInvalidCollisions() {
@@ -481,7 +470,8 @@ public class Body {
 	}*/
 	
 	public void clearCollisions() {
-		collisions.clear();
+		for(Volume volume : volumes) volume.clearCollisions();
+		for(Ray ray : rays) ray.clearCollisions();
 	}
 	
 	public Vector3f toLocalDirection(Vector3f globalDirection) {

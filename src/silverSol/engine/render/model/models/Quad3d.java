@@ -23,7 +23,7 @@ public class Quad3d extends Model {
 		this.vao = new Vao(6);
 		vao.bind();
 		
-		float x = width / 2f, y = height / 2f;
+		float x = width * 0.5f, y = height * 0.5f;
 		
 		int attributeNumber = 0;
 		
@@ -52,7 +52,7 @@ public class Quad3d extends Model {
 		vao.unbind();
 		
 		center = new Vector3f(0f, 0f, 0f);
-		size = new Vector3f(2f * x, 0, 2f * y);
+		size = new Vector3f(width, 0, height);
 		radius = new Vector3f(x, 0, y);
 
 		hasTexture = hasArmature = false;
@@ -63,7 +63,7 @@ public class Quad3d extends Model {
 		this.vao = new Vao(6);
 		vao.bind();
 		
-		float x = width / 2f, y = height / 2f;
+		float x = width * 0.5f, y = height * 0.5f;
 		
 		Vbo indexVbo = new Vbo();
 		indexVbo.setDrawType(glDrawType);
@@ -94,7 +94,7 @@ public class Quad3d extends Model {
 		vao.unbind();
 		
 		center = new Vector3f(0f, 0f, 0f);
-		size = new Vector3f(2f * x, 0, 2f * y);
+		size = new Vector3f(width, 0, height);
 		radius = new Vector3f(x, 0, y);
 
 		hasTexture = hasArmature = false;

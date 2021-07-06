@@ -16,6 +16,9 @@ public class Ray extends Collider {
 	
 	private Vector3f globalOrigin;
 	private Vector3f globalDirection;
+	
+	private Collision firstCollision;
+	private float firstDistance;
 		
 	public Ray(Vector3f origin, Vector3f direction, float length) {
 		super();
@@ -68,7 +71,7 @@ public class Ray extends Collider {
 	
 	public void setOrigin(Vector3f origin) {
 		this.origin.set(origin);
-		this.globalOrigin.set(this.toGlobalPosition(this.origin));
+		this.globalOrigin.set(hasBody ? this.toGlobalPosition(this.origin) : origin);
 	}
 
 	public Vector3f getDirection() {
@@ -81,16 +84,14 @@ public class Ray extends Collider {
 
 	public void setDirection(Vector3f direction) {
 		this.direction.set(direction.normalise(null));
-		this.globalDirection.set(this.toGlobalDirection(this.direction));
+		this.globalDirection.set(hasBody ? this.toGlobalDirection(this.direction) : direction);
 	}
 	
 	//TODO: Figure out how you want to attach rays to bodies in terms of global and local fields.
 	//As of right now, you've separated the local and global fields, as can clearly be seen here.
 	public void updateTransformation() {
-		if(hasBody) {
-			globalOrigin.set(this.toGlobalPosition(origin));
-			globalDirection.set(this.toGlobalDirection(direction));
-		}
+		globalOrigin.set(hasBody ? this.toGlobalPosition(origin) : origin);
+		globalDirection.set(hasBody ? this.toGlobalDirection(direction) : direction);
 	}
 
 	public float getLength() {
@@ -144,13 +145,39 @@ public class Ray extends Collider {
 		Collision collision = new Collision();
 		collision.setColliderA(v);
 		collision.setColliderB(this);
+		
+		/*In order to permit rays to be added to the collision routine apart from a body,
+		we calculate the local intersection parametrically rather than with this.toLocalPosition().*/
+		float t = Vector3f.sub(intersection[0], globalOrigin, null).length() / length;
 		collision.setContactA(v.toLocalPosition(intersection[0]), intersection[0]);
-		collision.setContactB(this.toLocalPosition(intersection[0]), intersection[0]);
+		collision.setContactB(VectorMath.mul(direction, t, null), intersection[0]);
+		
 		collision.setSeparatingAxis(intersection[1]);
 		
 		collision.setPenetrationDepth(0f);
 		
 		return new Collision[]{collision};
+	}
+	
+	public Collision getFirstCollision() {
+		return firstCollision;
+	}
+	
+	@Override
+	public void addCollision(Collision collision) {
+		super.addCollision(collision);
+		
+		float distance = Vector3f.dot(globalDirection, Vector3f.sub(collision.getGlobalContact(this), globalOrigin, null));
+		if(firstCollision == null || distance < firstDistance) {
+			firstDistance = distance;
+			firstCollision = collision;
+		}
+	}
+	
+	@Override
+	public void clearCollisions() {
+		super.clearCollisions();
+		firstCollision = null;
 	}
 	
 }

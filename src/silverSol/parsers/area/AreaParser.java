@@ -59,6 +59,7 @@ public class AreaParser {
 	}
 	
 	private static Terrain parseTerrain(XmlNode terrainInstance, String terrainPath) {
+		//TODO: Here, the terrain height is locked in at 40. It would better be read in from somewhere.
 		HeightMapTerrain terrain = TerrainParser.parseHeightMapTerrain(terrainPath, 40);
 		
 		String blendMap = "", black = "", red = "", green = "", blue = "";

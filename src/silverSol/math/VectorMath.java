@@ -166,16 +166,22 @@ public class VectorMath {
 		return VectorMath.div(mean, vectors.size(), null);
 	}
 	
-	public static Vector2f midpoint(Vector2f v1, Vector2f v2) {
-		return new Vector2f((v1.x + v2.x) * 0.5f, (v1.y + v2.y) * 0.5f);
+	public static Vector2f midpoint(Vector2f v1, Vector2f v2, Vector2f dest) {
+		Vector2f v = new Vector2f((v1.x + v2.x) * 0.5f, (v1.y + v2.y) * 0.5f);
+		if(dest != null) dest.set(v);
+		return v;
 	}
 	
-	public static Vector3f midpoint(Vector3f v1, Vector3f v2) {
-		return new Vector3f((v1.x + v2.x) * 0.5f, (v1.y + v2.y) * 0.5f, (v1.z + v2.z) * 0.5f);
+	public static Vector3f midpoint(Vector3f v1, Vector3f v2, Vector3f dest) {
+		Vector3f v = new Vector3f((v1.x + v2.x) * 0.5f, (v1.y + v2.y) * 0.5f, (v1.z + v2.z) * 0.5f);
+		if(dest != null) dest.set(v);
+		return v;
 	}
 	
-	public static Vector4f midpoint(Vector4f v1, Vector4f v2) {
-		return new Vector4f((v1.x + v2.x) * 0.5f, (v1.y + v2.y) * 0.5f, (v1.z + v2.z) * 0.5f, (v1.w + v2.w) * 0.5f);
+	public static Vector4f midpoint(Vector4f v1, Vector4f v2, Vector4f dest) {
+		Vector4f v = new Vector4f((v1.x + v2.x) * 0.5f, (v1.y + v2.y) * 0.5f, (v1.z + v2.z) * 0.5f, (v1.w + v2.w) * 0.5f);
+		if(dest != null) dest.set(v);
+		return v;
 	}
 	
 	public static Vector2f leastSignificantAxis(Vector2f v) {
@@ -443,6 +449,26 @@ public class VectorMath {
 		
 		Vector3f unitRot = Vector3f.add(mul(orthogonal, x_1, null), mul(w, x_2, null), null);
 		return mul(unitRot, orthogonalLength, dest);
+	}
+	
+	/**
+	 * Generates two additional vectors that form an orthogonal basis when joined with v.
+	 * @param v Normalized Vector3f
+	 * @return An array of two vectors that form an orthogonal basis together with v
+	 */
+	public static Vector3f[] generateBasis(Vector3f v, Vector3f dest1, Vector3f dest2) {
+		Vector3f tangent1 = new Vector3f();
+		Vector3f tangent2 = new Vector3f();
+		
+		if(v.x >= 0.57735f) tangent1.set(v.y, -v.x, 0f);
+		else tangent1.set(0f, v.z, -v.y);
+		tangent1.normalise(tangent1);
+		
+		tangent2.set(Vector3f.cross(v, tangent1, null));
+		
+		if(dest1 != null) dest1.set(tangent1);
+		if(dest2 != null) dest2.set(tangent2);
+		return new Vector3f[]{tangent1, tangent2};
 	}
 	
 	public static Vector3f gramSchmidt(Vector3f u, Vector3f v) {

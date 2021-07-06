@@ -12,7 +12,7 @@ public class Gui extends Entity {
 	
 	public Gui(Model.VertexType vertexType, boolean threeDimensional, float width, float height) {
 		super();
-		this.model = new Quad3d(vertexType, false, false, 1f, 1f, GL15.GL_STREAM_DRAW);
+		this.model = new Quad3d(vertexType, false, false, 2f, 2f, GL15.GL_STREAM_DRAW);
 		
 		if(threeDimensional) {
 			this.setBody(new silverSol.engine.physics.d3.body.Body());

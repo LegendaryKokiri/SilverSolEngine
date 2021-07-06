@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.lwjgl.util.vector.Matrix3f;
 import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Quaternion;
 import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
 
@@ -37,7 +38,8 @@ public abstract class Collider {
 	protected Endpoint[] endpoints;
 	
 	//Collision Data
-	protected List<Collider> ignoredColliders;
+	private List<Collision> collisions;
+	private List<Collider> ignoredColliders;
 	private List<CollisionMod> modifiers;
 	private List<CollisionFilter> filters;
 	private int modPriority;
@@ -46,20 +48,21 @@ public abstract class Collider {
 	private Object colliderData;
 	
 	public Collider() {
-		identityBitMask = 1;
-		collisionBitMask = 1;
-		ID = DEFAULT_ID;
+		this.identityBitMask = 1;
+		this.collisionBitMask = 1;
+		this.ID = DEFAULT_ID;
 		
-		bodyOffset = new Matrix4f();
+		this.bodyOffset = new Matrix4f();
 		
-		endpoints = new Endpoint[6];
+		this.endpoints = new Endpoint[6];
 		for(int i = 0; i < endpoints.length; i++) {
-			endpoints[i] = new Endpoint();
-			endpoints[i].value = 0;
-			endpoints[i].minimum = (i % 2 == 0);			
+			this.endpoints[i] = new Endpoint();
+			this.endpoints[i].value = 0;
+			this.endpoints[i].minimum = (i % 2 == 0);			
 		}
 		
-		ignoredColliders = new ArrayList<>();
+		this.collisions = new ArrayList<>();
+		this.ignoredColliders = new ArrayList<>();
 		this.modifiers = new ArrayList<>();
 		this.filters = new ArrayList<>();
 		this.modPriority = 0;
@@ -125,7 +128,7 @@ public abstract class Collider {
 	}
 
 	public void setBodyOffset(Matrix4f bodyOffset) {
-		this.bodyOffset = bodyOffset;
+		Matrix4f.load(bodyOffset, this.bodyOffset);
 	}
 	
 	public Vector3f toLocalDirection(Vector3f globalDirection) {
@@ -169,12 +172,16 @@ public abstract class Collider {
 		this.endpoints = endpoints.clone();
 	}
 	
-	public Object getColliderData() {
-		return colliderData;
+	public List<Collision> getCollisions() {
+		return collisions;
 	}
-
-	public void setColliderData(Object colliderData) {
-		this.colliderData = colliderData;
+	
+	public void addCollision(Collision collision) {
+		collisions.add(collision);
+	}
+	
+	public void clearCollisions() {
+		collisions.clear();
 	}
 	
 	public void ignoreCollidersOf(Body body) {
@@ -243,6 +250,14 @@ public abstract class Collider {
 
 	public void setModPriority(int modPriority) {
 		this.modPriority = modPriority;
+	}
+	
+	public Object getColliderData() {
+		return colliderData;
+	}
+
+	public void setColliderData(Object colliderData) {
+		this.colliderData = colliderData;
 	}
 	
 	@Override

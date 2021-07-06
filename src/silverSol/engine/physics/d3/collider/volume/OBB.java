@@ -54,9 +54,7 @@ public class OBB extends Volume {
 	public Vector3f[] raycast(Vector3f globalOrigin, Vector3f globalDirection, float maxLength, boolean global) {
 		Vector3f origin = toLocalPosition(globalOrigin);
 		Vector3f direction = toLocalDirection(globalDirection);
-		
-		System.out.println(origin + " --" + direction + "-->");
-		
+				
 		if(Math.abs(direction.x) < EPSILON && (origin.x < -e[0] || origin.x > e[0])) return null;
 		if(Math.abs(direction.y) < EPSILON && (origin.y < -e[1] || origin.y > e[1])) return null;
 		if(Math.abs(direction.z) < EPSILON && (origin.z < -e[2] || origin.z > e[2])) return null;
@@ -66,11 +64,6 @@ public class OBB extends Volume {
 		
 		Vector3f t1 = Vector3f.sub(toOrigin.negate(null), toFaces, null);
 		Vector3f t2 = Vector3f.add(toOrigin.negate(null), toFaces, null);
-		
-		System.out.println("toOrigin = " + toOrigin);
-		System.out.println("toFaces = " + toFaces);
-		System.out.println("t1 = " + t1);
-		System.out.println("t2 = " + t2);
 		
 		float tNear = 0f;
 		Vector3f normal = new Vector3f();

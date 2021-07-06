@@ -33,8 +33,8 @@ public class CollisionResolution {
 			Body bodyA = volumeA.getBody();
 			Body bodyB = volumeB.getBody();
 			
-			bodyA.addCollision(collision);
-			bodyB.addCollision(collision);
+			volumeA.addCollision(collision);
+			volumeB.addCollision(collision);
 			
 			if(volumeA.oughtResolve() && volumeB.oughtResolve()) {
 				if(volumeB.getModPriority() > volumeA.getModPriority()) volumeB.modifyCollision(collision);

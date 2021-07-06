@@ -20,6 +20,20 @@ public class SegmentMath {
 		return Vector3f.add(s1, VectorMath.mul(direction, NumberMath.clamp(t, 0f, segment.length()), null), null);
 	}
 	
+	public static boolean rayIntersects(Vector3f origin, Vector3f direction, Vector3f s1, Vector3f s2) {
+		Vector3f segment = Vector3f.sub(s2, s1, null);
+		Vector3f perp = Vector3f.cross(direction, segment, null);
+		float perpLengthSq = perp.lengthSquared();
+		if(perpLengthSq < EPSILON) return false;
+		
+		Vector3f dispCross = Vector3f.cross(Vector3f.sub(s1, origin, null), segment, null);
+		float dispCrossLengthSq = dispCross.lengthSquared();
+		
+		float dot = Vector3f.dot(perp, dispCross);
+		if(dot * dot - dispCrossLengthSq * perpLengthSq < -EPSILON) return false;
+		return true;
+	}
+	
 	public static Vector3f rayIntersection(Vector3f origin, Vector3f direction, Vector3f s1, Vector3f s2) {
 		Vector3f segment = Vector3f.sub(s2, s1, null);
 		Vector3f perp = Vector3f.cross(direction, segment, null);
