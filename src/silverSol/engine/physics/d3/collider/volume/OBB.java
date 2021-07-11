@@ -128,12 +128,8 @@ public class OBB extends Volume {
 	
 	@Override
 	public Collision[] testForResolutions(Volume volume) {
-		if(volume instanceof Landscape) return testLandscapeCollision((Landscape) volume);
+		if(volume instanceof Landscape) return ((Landscape) volume).testForResolutions(this);
 		else return new Collision[]{EPA.run(GJK.run(this, volume), this, volume)};
-	}
-	
-	public Collision[] testLandscapeCollision(Landscape landscape) {
-		return landscape.testForResolutions(this);
 	}
 	
 	@Override

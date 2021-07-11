@@ -29,7 +29,7 @@ public class GJK {
 		return null;
 	}
 	
-	public static Simplex run(Volume v1, Volume v2) {
+	public static Simplex run(Volume v1, Volume v2) {		
 		Simplex simplex = new Simplex(v1, v2);
 		int iterationCount = 0;
 		

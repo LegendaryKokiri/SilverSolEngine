@@ -5,6 +5,7 @@ import org.lwjgl.util.vector.Vector3f;
 
 import silverSol.engine.physics.d3.body.Body;
 import silverSol.engine.physics.d3.collider.volume.Capsule;
+import silverSol.engine.physics.d3.collider.volume.OBB;
 import silverSol.engine.physics.d3.collider.volume.Sphere;
 import silverSol.engine.physics.d3.collider.volume.Volume;
 import silverSol.engine.physics.d3.collider.volume.Volume.Type;
@@ -13,17 +14,34 @@ import silverSol.math.MatrixMath;
 
 public class EPA {
 	
-	private static final int MAX_ITERATIONS = 100;
+	private static final int MAX_ITERATIONS = 50;
 	
 	public static Collision run(Simplex simplex, Volume v1, Volume v2) {
 		if(simplex == null) return null;
 		
 		simplex.epaExpand(v1, v2);
+		
 		Polytype polytype = new Polytype(simplex);
 		int iterationCount = 0;
 		
 		while(true) {
+			if(iterationCount == 50) {
+				System.out.println("EPA.run(): Hit iteration 50. Colliders:");
+				System.out.println(v1);
+				System.out.println(v1.getTransformation());
+				System.out.println(v2);
+				System.out.println(v2.getTransformation());
+			}
+			
+			/*
+			if(iterationCount >= 50) {
+				Collision intermediate = polytype.generateCollision(v1, v2);
+				System.out.println("EPA.run(): Iteration " + iterationCount + " yields collision " + intermediate.getSeparatingAxis() + " of depth " + intermediate.getPenetrationDepth());
+			}
+			*/
+			
 			if(!polytype.expand(simplex, v1, v2) || iterationCount >= MAX_ITERATIONS) {
+//				if(v1 instanceof OBB && v2 instanceof OBB) System.out.println("===EPA.run() on two OBBs===");
 				return polytype.generateCollision(v1, v2);
 			}
 			

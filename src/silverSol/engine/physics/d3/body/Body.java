@@ -425,6 +425,18 @@ public class Body {
 		return collider.getBody() == this;
 	}
 	
+	public void setMasks(int identityBitMask, int collisionBitMask) {
+		for(Volume volume : volumes) {
+			volume.setIdentityBitMask(identityBitMask);
+			volume.setCollisionBitMask(collisionBitMask);
+		}
+		
+		for(Ray ray : rays) {
+			ray.setIdentityBitMask(identityBitMask);
+			ray.setCollisionBitMask(collisionBitMask);
+		}
+	}
+	
 	public List<CollisionMod> getModifiers() {
 		return modifiers;
 	}

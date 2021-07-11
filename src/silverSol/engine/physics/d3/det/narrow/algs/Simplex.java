@@ -3,6 +3,7 @@ package silverSol.engine.physics.d3.det.narrow.algs;
 import org.lwjgl.util.vector.Matrix3f;
 import org.lwjgl.util.vector.Vector3f;
 
+import silverSol.engine.physics.d3.collider.volume.OBB;
 import silverSol.engine.physics.d3.collider.volume.Volume;
 import silverSol.math.MatrixMath;
 import silverSol.math.VectorMath;
@@ -157,6 +158,7 @@ public class Simplex {
 		Vector3f normal = direction.normalise(null);
 		
 		if(direction.lengthSquared() < REDIRECT_THRESHOLD || VectorMath.hasNaN(normal)) {
+			if(v1 instanceof OBB && v2 instanceof OBB) System.out.println("Simplex.findSupport(): Support not far enough. Could be source of freezing.");
 			dest1.set(v1.getPosition());
 			dest2.set(v2.getPosition());
 			destS.set(0f, 0f, 0f);

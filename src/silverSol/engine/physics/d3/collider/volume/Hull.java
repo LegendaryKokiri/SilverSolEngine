@@ -52,9 +52,7 @@ public class Hull extends Volume {
 	}
 
 	@Override
-	public Vector3f[] raycast(Vector3f globalOrigin, Vector3f globalDirection, float maxLength, boolean global) {	
-		System.out.println("Hull.raycast(): Casting");
-		
+	public Vector3f[] raycast(Vector3f globalOrigin, Vector3f globalDirection, float maxLength, boolean global) {			
 		Vector3f origin = toLocalPosition(globalOrigin);
 		Vector3f direction = toLocalDirection(globalDirection);
 		float maxLengthSq = maxLength * maxLength;

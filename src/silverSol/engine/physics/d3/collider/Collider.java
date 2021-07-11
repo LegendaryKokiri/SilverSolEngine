@@ -26,8 +26,8 @@ public abstract class Collider {
 		protected Body body;
 	
 	//Identification
-	private short identityBitMask;
-	private short collisionBitMask;
+	private int identityBitMask;
+	private int collisionBitMask;
 	public static final int DEFAULT_ID = -1;
 	protected int ID;
 	
@@ -99,19 +99,19 @@ public abstract class Collider {
 		}
 	}
 	
-	public short getIdentityBitMask() {
+	public int getIdentityBitMask() {
 		return identityBitMask;
 	}
 
-	public void setIdentityBitMask(short identityBitMask) {
+	public void setIdentityBitMask(int identityBitMask) {
 		this.identityBitMask = identityBitMask;
 	}
 
-	public short getCollisionBitMask() {
+	public int getCollisionBitMask() {
 		return collisionBitMask;
 	}
 
-	public void setCollisionBitMask(short collisionBitMask) {
+	public void setCollisionBitMask(int collisionBitMask) {
 		this.collisionBitMask = collisionBitMask;
 	}
 	
