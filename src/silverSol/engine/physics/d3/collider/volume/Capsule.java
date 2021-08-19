@@ -3,10 +3,12 @@ package silverSol.engine.physics.d3.collider.volume;
 import org.lwjgl.util.vector.Vector3f;
 
 import silverSol.engine.physics.d3.body.Body;
+import silverSol.engine.physics.d3.collider.Collider;
 import silverSol.engine.physics.d3.collision.Collision;
 import silverSol.engine.physics.d3.det.narrow.algs.EPA;
 import silverSol.engine.physics.d3.det.narrow.algs.GJK;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
+import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
+import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
 import silverSol.math.VectorMath;
 
 public class Capsule extends Volume {
@@ -20,6 +22,10 @@ public class Capsule extends Volume {
 		super(collisionType, colliderData);
 		this.halfCyl = halfCyl;
 		this.radius = radius;
+	}
+	
+	public Collider clone() {
+		return new Capsule(halfCyl, radius, type, colliderData);
 	}
 
 	@Override
@@ -74,7 +80,7 @@ public class Capsule extends Volume {
 		if(y > 0f && y < baba) {
 			distance = t;
 			Vector3f.add(origin, VectorMath.mul(direction, distance, null), intersection);
-			normal.set(VectorMath.gramSchmidt(UP, intersection));
+			VectorMath.gramSchmidt(UP, intersection, normal);
 			normal.normalise(normal);
 		} else {
 			Vector3f oc = (y <= 0f) ? new Vector3f(toOrigin) : Vector3f.sub(origin, sphereB, null);
@@ -110,8 +116,48 @@ public class Capsule extends Volume {
 	}
 	
 	@Override
-	public SeparatingAxis[] getSeparatingAxes(Volume other) {
-		return new SeparatingAxis[0];
+	public SepPlane[] getSeparatingPlanes(Planar planar) {		
+		Vector3f topSphere = toGlobalPosition(new Vector3f(0f, halfCyl, 0f));
+		Vector3f bottomSphere = toGlobalPosition(new Vector3f(0f, -halfCyl, 0f));
+		
+		Vector3f topClosest = planar.closestPointTo(topSphere, true);
+		Vector3f bottomClosest = planar.closestPointTo(bottomSphere, true);
+		
+		Vector3f toTop = Vector3f.sub(topClosest, topSphere, null);
+		Vector3f toBottom = Vector3f.sub(bottomClosest, bottomSphere, null);
+				
+		toTop.normalise(toTop);
+		toBottom.normalise(toBottom);
+		
+		return new SepPlane[] {new SepPlane(toTop), new SepPlane(toBottom)};
+	}
+	
+	@Override
+	public SepEdge[] getSeparatingEdges(Planar planar) {
+		return new SepEdge[] {new SepEdge(toGlobalDirection(UP))};
+	}
+	
+	public Vector3f closestPointTo(Vector3f globalPoint, boolean global) {
+		Vector3f local = toLocalPosition(globalPoint);
+		
+		Vector3f vLocal = new Vector3f();
+		if(local.y > halfCyl) {
+			Vector3f sphereCenter = new Vector3f(0f, halfCyl, 0f);
+			Vector3f toLocal = Vector3f.sub(local, sphereCenter, null);
+			VectorMath.setLength(toLocal, radius, toLocal);
+			Vector3f.add(sphereCenter, toLocal, vLocal);
+		} else if(local.y < -halfCyl) {
+			Vector3f sphereCenter = new Vector3f(0f, -halfCyl, 0f);
+			Vector3f toLocal = Vector3f.sub(local, sphereCenter, null);
+			VectorMath.setLength(toLocal, radius, toLocal);
+			Vector3f.add(sphereCenter, toLocal, vLocal);
+		} else {
+			Vector3f toCyl = new Vector3f(local.x, 0f, local.z);
+			VectorMath.setLength(toCyl, radius, toCyl);
+			vLocal.set(toCyl.x, local.y, toCyl.z);
+		}
+		
+		return global ? toGlobalPosition(vLocal) : vLocal;
 	}
 	
 	public float getRadius() {
@@ -141,6 +187,18 @@ public class Capsule extends Volume {
 		Vector3f[] results = capsule.raycast(new Vector3f(10f, 11f, 18f), new Vector3f(-0.707f, 0f, -0.707f), 10f, true);
 		System.out.println("Intersection = " + results[0]);
 		System.out.println("Normal = " + results[1]);
+		
+		System.out.println("PROXIMITY TESTS");
+		Vector3f[] proximityTests = new Vector3f[]{new Vector3f(10f, 16f, 15f), new Vector3f(7.707f, 13.707f, 15f),
+				new Vector3f(4f, 6f, 15f), new Vector3f(6.293f, 8.293f, 15f),
+				new Vector3f(4f, 12f, 8f), new Vector3f(6.606f, 12f, 14.081f)};
+		
+		
+		for(int i = 0; i < proximityTests.length; i += 2) {
+			Vector3f closest = capsule.closestPointTo(proximityTests[i], true);
+			if(!VectorMath.getEqual(closest, proximityTests[i+1])) System.out.println("FAILED proximity test " + (i/2+1) + "! Closest = " + closest + " instead of " + proximityTests[i+1]);
+			else System.out.println("Passed proximity test " + (i/2+1));
+		}
 	}
 
 }

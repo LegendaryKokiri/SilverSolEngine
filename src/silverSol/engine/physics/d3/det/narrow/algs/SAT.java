@@ -8,87 +8,99 @@ import silverSol.engine.physics.d3.collider.volume.Planar;
 import silverSol.engine.physics.d3.collider.volume.Volume;
 import silverSol.engine.physics.d3.collider.volume.Volume.Type;
 import silverSol.engine.physics.d3.collision.Collision;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis.Resolution;
 
 public class SAT {
 	
-	public static Collision detect(Volume v1, Volume v2) {
-		return run(v1, v2, false);
+	/**
+	 * Detects whether or not a collision occurs with the separating axis theorem
+	 * @param v1 The first volume
+	 * @param v2 The second volume
+	 * @return A Collision object if a collision occurs, else null
+	 */
+	public static Collision detect(Planar p, Volume v) {
+		return run(p, v, false);
 	}
 	
-	public static Collision run(Volume v1, Volume v2) {
-		return run(v1, v2, true);
+	/**
+	 * Detects whether or not a collision occurs with the separating axis theorem
+	 * and calculates resolution information
+	 * @param v1 The first volume
+	 * @param v2 The second volume
+	 * @return A Collision object if a collision occurs, else null
+	 */
+	public static Collision run(Planar p, Volume v) {
+		return run(p, v, true);
 	}
 	
-	public static Collision run(Volume v1, Volume v2, boolean detailed) {		
+	public static Collision run(Planar p, Volume v, boolean detailed) {		
 		Collision collision = new Collision();
 		collision.setPenetrationDepth(Float.POSITIVE_INFINITY);
 		
-		checkAxes(collision, v1.getSeparatingAxes(v2), v1, v2, true);
-		if(Float.isNaN(collision.getPenetrationDepth())) return null;
+		Vector3f disp = Vector3f.sub(v.getPosition(), p.getPosition(), null);
+				
+		if(!checkAxes(collision, p.getSeparatingPlanes(null), p, v, disp)) return null;
+		if(!checkAxes(collision, v.getSeparatingPlanes(p), p, v, disp)) return null;
+				
+		for(SepEdge pEdge : p.getSeparatingEdges(null)) {
+			for(SepEdge vEdge : v.getSeparatingEdges(p)) {
+				Vector3f axis = Vector3f.cross(pEdge.getDirection(), vEdge.getDirection(), null).normalise(null);
+				if(!checkAxis(collision, axis, p, v, disp)) return null;
+			}
+		}
 		
-		checkAxes(collision, v2.getSeparatingAxes(v1), v1, v2, false);
-		if(Float.isNaN(collision.getPenetrationDepth())) return null;
+		collision.setColliderA(p);
+		collision.setColliderB(v);
 		
-		collision.setColliderA(v1);
-		collision.setColliderB(v2);
+		Vector3f localA = p.supportMap(collision.getSeparatingAxis(v), false);
+		collision.setContactA(localA, p.toGlobalPosition(localA));
 		
-		Vector3f localA = v1.supportMap(collision.getSeparatingAxis(v2), false);
-		collision.setContactA(localA, v1.toGlobalPosition(localA));
-		
-		Vector3f localB = v2.supportMap(collision.getSeparatingAxis(v1), false);
-		collision.setContactB(localB, v2.toGlobalPosition(localB));
+		Vector3f localB = v.supportMap(collision.getSeparatingAxis(p), false);
+		collision.setContactB(localB, v.toGlobalPosition(localB));
 		
 		return collision;
 	}
 	
-	private static void checkAxes(Collision collision, SeparatingAxis[] axes, Volume v1, Volume v2, boolean sAxis1) {		
-		for(SeparatingAxis sAxis : axes) {
-			Vector3f axis = new Vector3f(sAxis.getAxis());
-			Resolution resolution = sAxis.getResolution();
-			
-			//sAxis1 is true if the separating axis belongs to v1 and false if it belongs to v2.
-			float penetration = sAxis1 ? Math.abs(checkAxis(axis, v1, v2, resolution)) : Math.abs(checkAxis(axis, v2, v1, resolution));
-			
-			//Maintain convention of pointing from A into B
-			if(!sAxis1) {
-				axis.negate(axis);
-				penetration *= -1f;
-			}
-			
-			if(!Float.isNaN(penetration)) {
-				if(penetration < collision.getPenetrationDepth() && resolution != Resolution.NONE) {
-					collision.setSeparatingAxis(axis);
-					collision.setPenetrationDepth(penetration);
-				}
-			} else {
-				collision.setPenetrationDepth(Float.NaN);
-				return;
-			}
-		}		
+	private static boolean checkAxes(Collision collision, SepPlane[] axes, Volume v1, Volume v2, Vector3f disp) {		
+		for(SepPlane sAxis : axes) {
+			Vector3f axis = new Vector3f(sAxis.getNormal());
+			if(!checkAxis(collision, axis, v1, v2, disp)) return false;
+		}
+		
+		return true;
 	}
 	
-	private static float checkAxis(Vector3f axis, Volume v1, Volume v2, Resolution resolution) {
+	private static boolean checkAxis(Collision collision, Vector3f axis, Volume v1, Volume v2, Vector3f disp) {
+		//Maintain convention of pointing from A into B
+		if(Vector3f.dot(axis, disp) < 0f) axis.negate(axis);
 		Vector3f nAxis = axis.negate(null);
-		
+				
 		float min1 = Vector3f.dot(v1.supportMap(nAxis, true), axis);
 		float max1 = Vector3f.dot(v1.supportMap(axis, true), axis);
 		float min2 = Vector3f.dot(v2.supportMap(nAxis, true), axis);
 		float max2 = Vector3f.dot(v2.supportMap(axis, true), axis);
+				
+		float penetration = getPenetration(min1, max1, min2, max2);
 		
-		return getPenetration(min1, max1, min2, max2, resolution);
+		if(!Float.isNaN(penetration)) {			
+			if(penetration < collision.getPenetrationDepth()) {
+				collision.setSeparatingAxis(axis);
+				collision.setPenetrationDepth(penetration);
+			}
+			
+			return true;
+		}
+		
+		return false;
 	}
 	
-	private static float getPenetration(float min1, float max1, float min2, float max2, Resolution resolution) {
+	private static float getPenetration(float min1, float max1, float min2, float max2) {
 		float leftPen = max1 - min2;
 		float rightPen = max2 - min1;
 		
 		if(leftPen < 0) return Float.NaN; //Block 1 to the left of Block 2
 		if(rightPen < 0) return Float.NaN; //Block 1 to the right of Block 2
-				
-		if(resolution == Resolution.FORWARD || resolution == Resolution.NONE) return -leftPen;
-		if(resolution == Resolution.BACKWARD) return rightPen;
-		return leftPen < rightPen ? -leftPen : rightPen;
+		
+		return Math.min(leftPen, rightPen);
 	}
 	
 	public static void main(String[] args) {
@@ -107,7 +119,7 @@ public class SAT {
 		System.out.println(collision);
 		System.out.println("Separating Axis = " + collision.getSeparatingAxis());
 		System.out.println("Penetration Depth = " + collision.getPenetrationDepth());
-		System.out.println("B Local Contact = " + collision.getLocalContact(capsule));
+		System.out.println("Local Contact = " + collision.getLocalContact(capsule));
 	}
 	
 }

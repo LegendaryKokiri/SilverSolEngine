@@ -471,9 +471,11 @@ public class VectorMath {
 		return new Vector3f[]{tangent1, tangent2};
 	}
 	
-	public static Vector3f gramSchmidt(Vector3f u, Vector3f v) {
+	public static Vector3f gramSchmidt(Vector3f u, Vector3f v, Vector3f dest) {
 		Vector3f projection = VectorMath.mul(u, Vector3f.dot(v, u) / u.lengthSquared(), null);
-		return Vector3f.sub(v, projection, null);
+		Vector3f result = Vector3f.sub(v, projection, null);
+		if(dest != null) dest.set(result);
+		return result;
 	}
 	
 	public static void main(String[] args) {

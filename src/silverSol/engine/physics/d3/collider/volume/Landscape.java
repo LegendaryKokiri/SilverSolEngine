@@ -9,10 +9,12 @@ import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
 
 import silverSol.engine.physics.d3.body.Body;
+import silverSol.engine.physics.d3.collider.Collider;
 import silverSol.engine.physics.d3.collision.Collision;
 import silverSol.engine.physics.d3.det.narrow.algs.GJK;
 import silverSol.engine.physics.d3.det.narrow.algs.SAT;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
+import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
+import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
 import silverSol.math.MatrixMath;
 import silverSol.math.NumberMath;
 import silverSol.math.VectorMath;
@@ -39,7 +41,7 @@ public class Landscape extends Volume {
 	}
 	private static DepthComparator depthComparator = new DepthComparator();
 	
-	public Landscape(Type collisionType, float width, float height, float depth, float[][] heights, Object colliderData) {
+	public Landscape(float width, float height, float depth, float[][] heights, Type collisionType, Object colliderData) {
 		super(collisionType, colliderData);
 		
 		this.width = width;
@@ -61,6 +63,17 @@ public class Landscape extends Volume {
 		
 		this.gridSizeX = width / (float)(xPoints - 1);
 		this.gridSizeZ = depth / (float)(zPoints - 1);
+	}
+	
+	public Collider clone() {
+		float[][] cloneHeights = new float[heights.length][heights[0].length];
+		for(int x = 0; x < heights.length; x++) {
+			for(int z = 0; z < heights[0].length; z++) {
+				cloneHeights[x][z] = heights[x][z];
+			}
+		}
+		
+		return new Landscape(width, height, depth, cloneHeights, type, colliderData);
 	}
 	
 	private Planar generatePlanar(int gridX, int gridZ, boolean upperLeft) {
@@ -385,8 +398,13 @@ public class Landscape extends Volume {
 	}
 	
 	@Override
-	public SeparatingAxis[] getSeparatingAxes(Volume other) {
-		return new SeparatingAxis[0];
+	public SepPlane[] getSeparatingPlanes(Planar planar) {
+		return new SepPlane[0];
+	}
+	
+	@Override
+	public SepEdge[] getSeparatingEdges(Planar planar) {
+		return new SepEdge[0];
 	}
 	
 	public float getWidth() {
@@ -431,8 +449,8 @@ public class Landscape extends Volume {
 	
 	public static void main(String[] args) {
 		//TODO: Modify the landscape such that the height indices correspond to what you visually see when making such a 2-D array as heights
-		Landscape landscape = new Landscape(Type.SOLID, 10f, 40f, 10f, new float[][]{
-			{0f,0f,0f,0f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,0f,0f,0f,0f}}, null);
+		Landscape landscape = new Landscape(10f, 40f, 10f, new float[][]{
+			{0f,0f,0f,0f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,0f,0f,0f,0f}}, Type.SOLID, null);
 		landscape.setID(2);
 		
 		Body terrainBody = new Body();
@@ -465,7 +483,11 @@ public class Landscape extends Volume {
 		Vector3f testCases[][] = new Vector3f[][] {
 			{new Vector3f(4f, 9f, -9f), new Vector3f(0f, 0f, 1f)},
 			{new Vector3f(0f, 15f, 5.01f), new Vector3f(0f, 0f, -1f)},
-			{new Vector3f(0f, 50f, 0f), new Vector3f(0f, -1f, 0f)}};
+			{new Vector3f(0f, 50f, 0f), new Vector3f(0f, -1f, 0f)},
+			{new Vector3f(5.01f, 15f, 0f), new Vector3f(-0.707f, -0.707f, 0f)},
+			{new Vector3f(-5.01f, 15f, 0f), new Vector3f(0.707f, -0.707f, 0f)},
+			{new Vector3f(0f, 15f, 5.01f), new Vector3f(0f, -0.707f, -0.707f)},
+			{new Vector3f(0f, 15f, -5.01f), new Vector3f(0f, -0.707f, 0.707f)}};
 		
 		
 		Vector3f intersection[] = null;

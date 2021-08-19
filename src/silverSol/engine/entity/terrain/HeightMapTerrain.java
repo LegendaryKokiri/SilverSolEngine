@@ -12,7 +12,7 @@ public class HeightMapTerrain extends Terrain {
 		Body body = new Body();
 		body.setImmovable(true);
 		body.setMass(Float.POSITIVE_INFINITY);
-		body.addVolume(new Landscape(Type.SOLID, width, height, depth, heights, null));
+		body.addVolume(new Landscape(width, height, depth, heights, Type.SOLID, null));
 		setBody(body);
 	}
 	

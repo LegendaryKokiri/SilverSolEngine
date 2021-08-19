@@ -3,19 +3,26 @@ package silverSol.engine.physics.d3.collider.volume;
 import org.lwjgl.util.vector.Vector3f;
 
 import silverSol.engine.physics.d3.body.Body;
+import silverSol.engine.physics.d3.collider.Collider;
 import silverSol.engine.physics.d3.collision.Collision;
 import silverSol.engine.physics.d3.det.narrow.algs.EPA;
 import silverSol.engine.physics.d3.det.narrow.algs.GJK;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
+import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
+import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
 import silverSol.math.VectorMath;
 
 public class Sphere extends Volume {
 
+	private static final float EPSILON = 1E-3f;
 	private float radius;
 	
 	public Sphere(float radius, Type collisionType, Object colliderData) {
 		super(collisionType, colliderData);
 		setRadius(radius);
+	}
+	
+	public Collider clone() {
+		return new Sphere(radius, type, colliderData);
 	}
 	
 	@Override
@@ -101,8 +108,29 @@ public class Sphere extends Volume {
 	}
 	
 	@Override
-	public SeparatingAxis[] getSeparatingAxes(Volume other) {
-		return new SeparatingAxis[0];
+	public SepPlane[] getSeparatingPlanes(Planar planar) {
+		Vector3f closest = planar.closestPointTo(position, true);
+		Vector3f toClosest = Vector3f.sub(closest, position, null);
+		
+		return new SepPlane[] {new SepPlane(toClosest)};
+	}
+	
+	@Override
+	public SepEdge[] getSeparatingEdges(Planar planar) {
+		return new SepEdge[0];
+	}
+	
+	public Vector3f closestPointTo(Vector3f globalPoint, boolean global) {
+		Vector3f disp = global ? Vector3f.sub(globalPoint, position, null) : toLocalPosition(globalPoint);
+		
+		if(disp.lengthSquared() < EPSILON) {
+			Vector3f top = global ? new Vector3f(globalPoint) : new Vector3f();
+			top.y += radius;
+			return top;
+		}
+		
+		Vector3f vLocal = VectorMath.setLength(disp, radius, null);
+		return global ? toGlobalPosition(vLocal) : vLocal;
 	}
 	
 	public float getRadius() {
@@ -121,6 +149,15 @@ public class Sphere extends Volume {
 			body.addVolume(sphere);
 			
 		System.out.println(sphere.raycast(new Vector3f(-5.001f, 11f, 15f), new Vector3f(1f, 0f, 0f), 10f, true));
+		
+		System.out.println("PROXIMITY TESTS");
+		Vector3f[] proximityTests = new Vector3f[]{new Vector3f(10f, 14f, 15f), new Vector3f(8.414213f, 12.414213f, 15f)};
+		
+		for(int i = 0; i < proximityTests.length; i += 2) {
+			Vector3f closest = sphere.closestPointTo(proximityTests[i], true);
+			if(!VectorMath.getEqual(closest, proximityTests[i+1])) System.out.println("FAILED proximity test " + (i/2+1) + "! Closest = " + closest + " instead of " + proximityTests[i+1]);
+			else System.out.println("Passed proximity test " + (i/2+1));
+		}
 	}
 	
 }

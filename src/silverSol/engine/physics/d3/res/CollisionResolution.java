@@ -11,7 +11,7 @@ import silverSol.engine.physics.d3.constraint.Constraint;
 
 public class CollisionResolution {
 	
-	List<Constraint> constraints;
+	private List<Constraint> constraints;
 	
 	public CollisionResolution() {
 		constraints = new ArrayList<>();

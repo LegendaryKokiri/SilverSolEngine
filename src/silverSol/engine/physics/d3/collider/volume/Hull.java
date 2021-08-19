@@ -2,10 +2,12 @@ package silverSol.engine.physics.d3.collider.volume;
 
 import org.lwjgl.util.vector.Vector3f;
 
+import silverSol.engine.physics.d3.collider.Collider;
 import silverSol.engine.physics.d3.collision.Collision;
 import silverSol.engine.physics.d3.det.narrow.algs.EPA;
 import silverSol.engine.physics.d3.det.narrow.algs.GJK;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
+import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
+import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
 import silverSol.math.NumberMath;
 import silverSol.math.TriangleMath;
 import silverSol.math.VectorMath;
@@ -16,16 +18,31 @@ public class Hull extends Volume {
 	private int[] indices;
 	private float radius;
 	
+	private Vector3f[] normals;
+	
 	public Hull(Type collisionType, Object colliderData) {
 		super(collisionType, colliderData);
-		vertices = new Vector3f[0];
+		this.vertices = new Vector3f[0];
+		this.indices = new int[0];
+		this.normals = new Vector3f[0];
 	}
 	
 	public Hull(Vector3f[] vertices, int[] indices, Type collisionType, Object colliderData) {
 		super(collisionType, colliderData);
 		this.vertices = vertices.clone();	
 		this.indices = indices.clone();
-		radius = VectorMath.longest(vertices).length();
+		this.radius = VectorMath.longest(vertices).length();
+		
+		this.normals = new Vector3f[indices.length / 3];
+		for(int i = 0; i + 2 < indices.length; i += 3) {
+			Vector3f edge1 = Vector3f.sub(vertices[indices[i+1]], vertices[indices[i]], null);
+			Vector3f edge2 = Vector3f.sub(vertices[indices[i+2]], vertices[indices[i+1]], null);
+			Vector3f.cross(edge1, edge2, null).normalise(this.normals[i/3]);
+		}
+	}
+	
+	public Collider clone() {
+		return new Hull(vertices, indices, type, colliderData);
 	}
 
 	@Override
@@ -97,7 +114,25 @@ public class Hull extends Volume {
 	}
 	
 	@Override
-	public SeparatingAxis[] getSeparatingAxes(Volume other) {
-		return new SeparatingAxis[0];
+	public SepPlane[] getSeparatingPlanes(Planar planar) {
+		SepPlane[] planes = new SepPlane[normals.length];
+		
+		for(int i = 0; i < normals.length; i++) {
+			planes[i] = new SepPlane(normals[i]);
+		}
+		
+		return planes;
 	}
+	
+	@Override
+	public SepEdge[] getSeparatingEdges(Planar planar) {
+		SepEdge[] edges = new SepEdge[indices.length];
+		
+		for(int i = 0; i < edges.length; i++) {
+			edges[i] = new SepEdge(Vector3f.sub(vertices[indices[(i+1)%indices.length]], vertices[indices[i]], null));
+		}
+		
+		return edges;
+	}
+	
 }

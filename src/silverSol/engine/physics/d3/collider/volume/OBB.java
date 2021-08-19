@@ -3,10 +3,12 @@ package silverSol.engine.physics.d3.collider.volume;
 import org.lwjgl.util.vector.Vector3f;
 
 import silverSol.engine.physics.d3.body.Body;
+import silverSol.engine.physics.d3.collider.Collider;
 import silverSol.engine.physics.d3.collision.Collision;
 import silverSol.engine.physics.d3.det.narrow.algs.EPA;
 import silverSol.engine.physics.d3.det.narrow.algs.GJK;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
+import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
+import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
 import silverSol.math.NumberMath;
 import silverSol.math.VectorMath;
 
@@ -28,6 +30,10 @@ public class OBB extends Volume {
 	
 	public OBB(Vector3f radius, Type collisionType, Object colliderData) {
 		this(radius.x, radius.y, radius.z, collisionType, colliderData);
+	}
+	
+	public Collider clone() {
+		return new OBB(e[0], e[1], e[2], type, colliderData);
 	}
 	
 	@Override
@@ -133,8 +139,53 @@ public class OBB extends Volume {
 	}
 	
 	@Override
-	public SeparatingAxis[] getSeparatingAxes(Volume other) {
-		return new SeparatingAxis[0];
+	public SepPlane[] getSeparatingPlanes(Planar planar) {
+		Vector3f x = toGlobalDirection(new Vector3f(1f, 0f, 0f));
+		Vector3f y = toGlobalDirection(new Vector3f(0f, 1f, 0f));
+		Vector3f z = toGlobalDirection(new Vector3f(0f, 0f, 1f));
+		
+		return new SepPlane[] {new SepPlane(x), new SepPlane(y), new SepPlane(z)};
+	}
+	
+	@Override
+	public SepEdge[] getSeparatingEdges(Planar planar) {
+		Vector3f x = toGlobalDirection(new Vector3f(1f, 0f, 0f));
+		Vector3f y = toGlobalDirection(new Vector3f(0f, 1f, 0f));
+		Vector3f z = toGlobalDirection(new Vector3f(0f, 0f, 1f));
+		
+		return new SepEdge[] {new SepEdge(x), new SepEdge(y), new SepEdge(z)};
+	}
+	
+	public Vector3f closestPointTo(Vector3f globalPoint, boolean global) {
+		Vector3f localPoint = toLocalPosition(globalPoint);
+		
+		float halfX = e[0];
+		float halfY = e[1];
+		float halfZ = e[2];
+		Vector3f vLocal = new Vector3f(
+				NumberMath.clamp(localPoint.x, -halfX, halfX),
+				NumberMath.clamp(localPoint.y, -halfY, halfY),
+				NumberMath.clamp(localPoint.z, -halfZ, halfZ));
+		
+		boolean xBetween = -halfX < vLocal.x && vLocal.x < halfX;
+		boolean yBetween = -halfX < vLocal.x && vLocal.x < halfX;
+		boolean zBetween = -halfX < vLocal.x && vLocal.x < halfX;
+		
+		//If the point is not on the extremem on any axis, then localPoint was inside the shape.
+		//We therefore must find the closest point on the surface.
+		if(xBetween && yBetween && zBetween) {
+			float xDist = xBetween ? halfX - Math.abs(vLocal.x) : Float.POSITIVE_INFINITY;
+			float yDist = yBetween ? halfY - Math.abs(vLocal.y) : Float.POSITIVE_INFINITY;
+			float zDist = zBetween ? halfZ - Math.abs(vLocal.z) : Float.POSITIVE_INFINITY;
+			
+			float min = NumberMath.min(xDist, yDist, zDist);
+			
+			if(min == xDist) vLocal.x = Math.signum(vLocal.x) * halfX;
+			else if(min == yDist) vLocal.y = Math.signum(vLocal.y) * halfY;
+			else vLocal.z = Math.signum(vLocal.z) * halfZ;
+		}
+		
+		return global ? toGlobalPosition(vLocal) : vLocal;
 	}
 	
 	public static void main(String[] args) {
@@ -147,5 +198,14 @@ public class OBB extends Volume {
 		Vector3f[] results = obb.raycast(new Vector3f(0f, 11.5f, 15f), new Vector3f(1f, 0f, 0f), 10f, false);
 		System.out.println("Intersection Point = " + results[0]);
 		System.out.println("Surface Normal = " + results[1]);
+		
+		System.out.println("PROXIMITY TESTS");
+		Vector3f[] proximityTests = new Vector3f[]{new Vector3f(5f, 10.5f, 14.9f), new Vector3f(6f, 10.5f, 14.9f)};
+		
+		for(int i = 0; i < proximityTests.length; i += 2) {
+			Vector3f closest = obb.closestPointTo(proximityTests[i], true);
+			if(!VectorMath.getEqual(closest, proximityTests[i+1])) System.out.println("FAILED proximity test " + (i/2+1) + "! Closest = " + closest + " instead of " + proximityTests[i+1]);
+			else System.out.println("Passed proximity test " + (i/2+1));
+		}
 	}
 }

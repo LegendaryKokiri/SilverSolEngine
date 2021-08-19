@@ -3,13 +3,15 @@ package silverSol.engine.physics.d3.collider.volume;
 import org.lwjgl.util.vector.Vector2f;
 import org.lwjgl.util.vector.Vector3f;
 
+import silverSol.engine.physics.d3.collider.Collider;
 import silverSol.engine.physics.d3.collision.Collision;
 import silverSol.engine.physics.d3.det.narrow.algs.EPA;
 import silverSol.engine.physics.d3.det.narrow.algs.GJK;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis.Resolution;
+import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
+import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
 import silverSol.math.PlaneMath;
 import silverSol.math.SegmentMath;
+import silverSol.math.TriangleMath;
 import silverSol.math.VectorMath;
 
 public class Planar extends Volume {
@@ -41,6 +43,10 @@ public class Planar extends Volume {
 		for(int i = 0; i < vertices.length; i++) {
 			this.projectedVertices[i] = project(vertices[i]);
 		}
+	}
+	
+	public Collider clone() {
+		return new Planar(vertices, type, colliderData);
 	}
 
 	@Override
@@ -93,6 +99,21 @@ public class Planar extends Volume {
 		if(toPlane.lengthSquared() > maxLength * maxLength) return null;
 		
 		Vector2f p = project(intersection);
+		if(!projectionContains(p)) return null;
+		
+		if(global) return new Vector3f[]{toGlobalPosition(intersection), toGlobalDirection(normal)};
+		return new Vector3f[]{intersection, new Vector3f(normal)};
+	}
+
+	private Vector2f project(Vector3f v) {
+		return new Vector2f(Vector3f.dot(basis1, v), Vector3f.dot(basis2, v));
+	}
+	
+	private Vector3f unproject(Vector2f v) {
+		return Vector3f.add(VectorMath.mul(basis1, v.x, null), VectorMath.mul(basis2, v.y, null), null);
+	}
+	
+	private boolean projectionContains(Vector2f p) {
 		boolean inShape = false;
 		
 		//Cast the ray (1,0) from the point and see how many edges it crosses.
@@ -121,14 +142,7 @@ public class Planar extends Volume {
 			inShape = !inShape;
 		}
 		
-		if(!inShape) return null;
-		
-		if(global) return new Vector3f[]{toGlobalPosition(intersection), toGlobalDirection(normal)};
-		return new Vector3f[]{intersection, new Vector3f(normal)};
-	}
-
-	private Vector2f project(Vector3f v) {
-		return new Vector2f(Vector3f.dot(this.basis1, v), Vector3f.dot(this.basis2, v));
+		return inShape;
 	}
 	
 	@Override
@@ -144,20 +158,52 @@ public class Planar extends Volume {
 	}
 	
 	@Override
-	public SeparatingAxis[] getSeparatingAxes(Volume other) {
-		SeparatingAxis axes[] = new SeparatingAxis[vertices.length + 1];
-		axes[0] = new SeparatingAxis(this.toGlobalDirection(normal), Resolution.FORWARD);
+	public SepPlane[] getSeparatingPlanes(Planar planar) {
+		return new SepPlane[] {new SepPlane(this.toGlobalDirection(normal))};
+	}
+	
+	@Override
+	public SepEdge[] getSeparatingEdges(Planar planar) {
+		SepEdge[] edges = new SepEdge[vertices.length];
 		
-		int index = 1;
-		for(int i = 1; i <= vertices.length; i++) {
+		for(int i = 0; i < vertices.length; i++) {
 			//TODO: Having a set of normalised edges would speed this up by saving us from having to normalise.
 			//TODO: Better yet, we can just precompute the separating axes in local space and globalize them
-			Vector3f local = Vector3f.cross(normal, Vector3f.sub(vertices[i % vertices.length], vertices[i-1], null), null).normalise(null);
-			axes[index++] = new SeparatingAxis(this.toGlobalDirection(local), Resolution.NONE);
+			Vector3f local = Vector3f.cross(normal, Vector3f.sub(vertices[(i+1) % vertices.length], vertices[i], null), null);
+			edges[i] = new SepEdge(this.toGlobalDirection(local));
 		}
 		
-		//TODO: Note that we are not returning all axes.
-		return axes;
+		return edges;
+	}
+	
+	public Vector3f closestPointTo(Vector3f globalPoint, boolean global) {
+		Vector3f localPoint = toLocalPosition(globalPoint);
+		
+		if(vertices.length == 3) {
+			Vector3f tClosest = TriangleMath.closestPointTo(localPoint, vertices[0], vertices[1], vertices[2]);
+			return global ? toGlobalPosition(tClosest) : tClosest;
+		}
+
+		Vector2f closestLocal = project(localPoint);
+		
+		if(!projectionContains(closestLocal) ) {
+			float closestDistance = Float.POSITIVE_INFINITY;
+			for(int i = 0; i < projectedVertices.length; i++) {
+				Vector2f s1 = projectedVertices[i];
+				Vector2f s2 = projectedVertices[(i+1) % projectedVertices.length];
+				
+				Vector2f segmentClosest = SegmentMath.closestPointTo(closestLocal, s1, s2);
+				float distance = Vector2f.sub(closestLocal, segmentClosest, null).lengthSquared();
+				
+				if(distance < closestDistance || closestLocal == null) {
+					closestLocal = segmentClosest;
+					closestDistance = distance;
+				}
+			}
+		}
+		
+		Vector3f vLocal = unproject(closestLocal);
+		return global ? toGlobalPosition(vLocal) : vLocal;
 	}
 	
 	public Vector3f[] getVertices() {

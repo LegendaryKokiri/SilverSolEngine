@@ -146,9 +146,18 @@ public class Body {
 	}
 
 	public void setTransformation(Vector3f position, Quaternion rotation, Vector3f scale) {
-		setPosition(position);
-		setRotation(rotation);
-		setScale(scale);
+		this.position.set(MatrixMath.getTranslation(transformation));
+		this.rotation.set(rotation);
+		this.scale.set(scale);
+		updateTransformation();
+		
+		for(Volume volume : volumes) {
+			volume.updateTransformation();
+		}
+		
+		for(Ray ray : rays) {
+			ray.updateTransformation();
+		}
 	}
 	
 	public Vector3f getPosition() {
@@ -319,6 +328,9 @@ public class Body {
 		this.transformation.load(transformation);
 		this.position.set(MatrixMath.getTranslation(transformation));
 		Quaternion.setFromMatrix(transformation, rotation);
+		this.scale.set(new Vector3f(transformation.m00, transformation.m01, transformation.m02).length(),
+				new Vector3f(transformation.m10, transformation.m11, transformation.m12).length(),
+				new Vector3f(transformation.m20, transformation.m21, transformation.m22).length());
 		
 		for(Volume volume : volumes) {
 			volume.updateTransformation();

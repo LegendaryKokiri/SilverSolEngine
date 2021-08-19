@@ -33,7 +33,7 @@ public class ModOrtho implements CollisionMod {
 		Vector3f newSeparation = new Vector3f();
 		if(angle <= alignAngle) newSeparation.set(axis);
 		else if(PI - angle <= alignAngle) newSeparation.set(axis.negate(null));
-		else VectorMath.gramSchmidt(axis, separatingAxis).normalise(newSeparation);
+		else VectorMath.gramSchmidt(axis, separatingAxis, null).normalise(newSeparation);
 		
 		float projection = Vector3f.dot(separatingAxis, newSeparation);
 		collision.setSeparatingAxis(newSeparation);

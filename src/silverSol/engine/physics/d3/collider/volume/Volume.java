@@ -8,7 +8,8 @@ import silverSol.engine.physics.d3.body.Body;
 import silverSol.engine.physics.d3.collider.Collider;
 import silverSol.engine.physics.d3.collider.ray.Ray;
 import silverSol.engine.physics.d3.collision.Collision;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
+import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
+import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
 import silverSol.math.MatrixMath;
 import silverSol.parsers.model.ModelParser;
 
@@ -20,7 +21,7 @@ import silverSol.parsers.model.ModelParser;
  */
 public abstract class Volume extends Collider {
 	
-	private Type type;
+	protected Type type;
 	public enum Type {
 		ETHEREAL, SENSOR, SENSOR_PLUS, SOLID
 	}
@@ -174,7 +175,8 @@ public abstract class Volume extends Collider {
 	public abstract Collision[] testForCollisions(Volume volume);
 	public abstract Collision[] testForResolutions(Volume volume);
 	
-	public abstract SeparatingAxis[] getSeparatingAxes(Volume other);
+	public abstract SepPlane[] getSeparatingPlanes(Planar planar);
+	public abstract SepEdge[] getSeparatingEdges(Planar planar);
 	
 	public void updateTransformation() {
 		transformation.load(Matrix4f.mul(body.getTransformation(), bodyOffset, null));

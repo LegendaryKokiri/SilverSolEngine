@@ -30,6 +30,10 @@ public class Ray extends Collider {
 		this.globalDirection = new Vector3f(this.direction);
 	}
 	
+	public Collider clone() {
+		return new Ray(origin, direction, length);
+	}
+	
 	@Override
 	public void calculateEndpoints() {
 		setEndpointsAxis(globalOrigin.x, globalDirection.x * length, endpoints[0], endpoints[1]);

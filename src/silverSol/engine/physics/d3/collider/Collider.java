@@ -45,7 +45,7 @@ public abstract class Collider {
 	private int modPriority;
 	
 	//User-Defined Collider Data
-	private Object colliderData;
+	protected Object colliderData;
 	
 	public Collider() {
 		this.identityBitMask = 1;
@@ -72,6 +72,8 @@ public abstract class Collider {
 		this();
 		this.colliderData = colliderData;
 	}
+	
+	public abstract Collider clone();
 	
 	public abstract boolean oughtOmitData();
 	public abstract boolean oughtResolve();

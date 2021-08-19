@@ -19,7 +19,6 @@ public class Edge {
 		if(this == o) return true;
 		if(o == null) return false;
 		if(this.getClass() != o.getClass()) return false;
-		Edge e = (Edge) o;
 		return VectorMath.getEqual(v1, this.v1) && VectorMath.getEqual(v2, this.v2);
 	}
 	

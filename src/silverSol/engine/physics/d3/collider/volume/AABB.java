@@ -3,13 +3,19 @@ package silverSol.engine.physics.d3.collider.volume;
 import org.lwjgl.util.vector.Vector3f;
 
 import silverSol.engine.physics.d3.body.Body;
+import silverSol.engine.physics.d3.collider.Collider;
 import silverSol.engine.physics.d3.collision.Collision;
 import silverSol.engine.physics.d3.det.narrow.algs.EPA;
 import silverSol.engine.physics.d3.det.narrow.algs.GJK;
-import silverSol.engine.physics.d3.det.narrow.algs.SeparatingAxis;
+import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
+import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
+import silverSol.math.NumberMath;
 
 public class AABB extends Volume {
 	
+	private static final Vector3f X = new Vector3f(1f, 0f, 0f);
+	private static final Vector3f Y = new Vector3f(0f, 1f, 0f);
+	private static final Vector3f Z = new Vector3f(0f, 0f, 1f);
 	public static final float EPSILON = 1E-3f;
 	
 	//DIMENSIONS
@@ -23,6 +29,10 @@ public class AABB extends Volume {
 	public AABB(Vector3f halfDimensions, Type collisionType, Object colliderData) {
 		super(collisionType, colliderData);
 		halfLengths = new float[]{halfDimensions.x, halfDimensions.y, halfDimensions.z};
+	}
+	
+	public Collider clone() {
+		return new AABB(halfLengths[0], halfLengths[1], halfLengths[2], type, colliderData);
 	}
 	
 	@Override
@@ -67,8 +77,45 @@ public class AABB extends Volume {
 	}
 	
 	@Override
-	public SeparatingAxis[] getSeparatingAxes(Volume other) {
-		return new SeparatingAxis[0];
+	public SepPlane[] getSeparatingPlanes(Planar planar) {
+		return new SepPlane[] {new SepPlane(X), new SepPlane(Y), new SepPlane(Z)};
+	}
+	
+	@Override
+	public SepEdge[] getSeparatingEdges(Planar planar) {
+		return new SepEdge[] {new SepEdge(X), new SepEdge(Y), new SepEdge(Z)};
+	}
+	
+	public Vector3f closestPointTo(Vector3f globalPoint, boolean global) {
+		Vector3f localPoint = toLocalPosition(globalPoint);
+		
+		float halfX = halfLengths[0];
+		float halfY = halfLengths[1];
+		float halfZ = halfLengths[2];
+		Vector3f vLocal = new Vector3f(
+				NumberMath.clamp(localPoint.x, -halfX, halfX),
+				NumberMath.clamp(localPoint.y, -halfY, halfY),
+				NumberMath.clamp(localPoint.z, -halfZ, halfZ));
+		
+		boolean xBetween = -halfX < vLocal.x && vLocal.x < halfX;
+		boolean yBetween = -halfX < vLocal.x && vLocal.x < halfX;
+		boolean zBetween = -halfX < vLocal.x && vLocal.x < halfX;
+		
+		//If the point is not on the extremem on any axis, then localPoint was inside the shape.
+		//We therefore must find the closest point on the surface.
+		if(xBetween && yBetween && zBetween) {
+			float xDist = xBetween ? halfX - Math.abs(vLocal.x) : Float.POSITIVE_INFINITY;
+			float yDist = yBetween ? halfY - Math.abs(vLocal.y) : Float.POSITIVE_INFINITY;
+			float zDist = zBetween ? halfZ - Math.abs(vLocal.z) : Float.POSITIVE_INFINITY;
+			
+			float min = NumberMath.min(xDist, yDist, zDist);
+			
+			if(min == xDist) vLocal.x = Math.signum(vLocal.x) * halfX;
+			else if(min == yDist) vLocal.y = Math.signum(vLocal.y) * halfY;
+			else vLocal.z = Math.signum(vLocal.z) * halfZ;
+		}
+		
+		return global ? toGlobalPosition(vLocal) : vLocal;
 	}
 	
 	public static void main(String[] args) {
