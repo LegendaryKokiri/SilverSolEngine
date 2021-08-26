@@ -2,6 +2,7 @@ package silverSol.engine.render.camera;
 
 import org.lwjgl.opengl.Display;
 import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector2f;
 import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
 
@@ -213,6 +214,36 @@ public class Camera extends Entity {
 	public void calculateMatrices() {
 		calculateViewMatrix();
 		calculateProjectionMatrix();
+	}
+	
+	/**
+	 * Get the normalized device coordinates of a position on the screen
+	 * @param screenX The x-coordinate of the screen position
+	 * @param screenY The y-coordinate of the screen position
+	 * @return The normalized device coordinates corresponding to the screen position
+	 */
+	public Vector2f getNDC(float screenX, float screenY) {
+		float x = 2f * screenX / screenWidth - 1f;
+		float y = 2f * screenY / screenHeight - 1f;
+		return new Vector2f(x, y);
+	}
+	
+	/**
+	 * Get the world-space direction of a point on the screen
+	 * @return The world-space direction from the camera to that point on the screen
+	 */
+	public Vector3f getDirection(float screenX, float screenY) {
+		Vector2f ndc = getNDC(screenX, screenY);
+		Vector4f clipCoords = new Vector4f(ndc.x, ndc.y, -1f, 1f);
+		Matrix4f invertedProjection = Matrix4f.invert(projectionMatrix, null);
+		Vector4f eyeCoords = Matrix4f.transform(invertedProjection, clipCoords, null);
+		eyeCoords.z = -1f;
+		eyeCoords.w = 0f;
+		Matrix4f invertedView = Matrix4f.invert(viewMatrix, null);
+		Vector4f rayWorld = Matrix4f.transform(invertedView, eyeCoords, null);
+		Vector3f forward = new Vector3f(rayWorld.x, rayWorld.y, rayWorld.z);
+		forward.normalise();
+		return forward;
 	}
 	
 	/**

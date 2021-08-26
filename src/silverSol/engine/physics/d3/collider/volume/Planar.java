@@ -123,14 +123,14 @@ public class Planar extends Volume {
 			Vector2f p2 = projectedVertices[i % projectedVertices.length];
 			
 			//Is intersection point between the y-boundaries of the edge?
-			if(!(p1.y < p.y && p.y <= p2.y) && !(p2.y <= p.y && p.y < p1.y)) {
+			if(!(p1.y < p.y && p.y <= p2.y) && !(p2.y < p.y && p.y <= p1.y)) {
 				continue;
 			}
 			
 			//Is the edge vertical? If so, we can't do traditional slope calculations.
 			//TODO: We probably want to check within EPSILON rather than exact equality
 			if(p1.x == p2.x) {
-				if(p.x <= p1.x) inShape = !inShape;
+				if(p.x < p1.x) inShape = !inShape;
 				continue;
 			}
 			

@@ -146,7 +146,7 @@ public class Body {
 	}
 
 	public void setTransformation(Vector3f position, Quaternion rotation, Vector3f scale) {
-		this.position.set(MatrixMath.getTranslation(transformation));
+		this.position.set(position);
 		this.rotation.set(rotation);
 		this.scale.set(scale);
 		updateTransformation();
@@ -159,6 +159,8 @@ public class Body {
 			ray.updateTransformation();
 		}
 	}
+	
+	/*TODO: setTransformation(Matrix4f transformation)*/
 	
 	public Vector3f getPosition() {
 		return position;

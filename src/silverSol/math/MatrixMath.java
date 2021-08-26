@@ -271,7 +271,6 @@ public class MatrixMath {
 	public static Matrix4f createTransformation(Vector3f translation, Vector3f rotation, Vector3f scale) {
 		Matrix4f matrix = new Matrix4f();
 		
-		
 		Matrix4f.translate(translation, matrix, matrix);
 		Matrix4f.rotate(rotation.z, new Vector3f(0, 0, 1), matrix, matrix);
 		Matrix4f.rotate(rotation.y, new Vector3f(0, 1, 0), matrix, matrix);

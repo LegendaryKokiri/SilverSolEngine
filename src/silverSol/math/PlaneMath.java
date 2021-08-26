@@ -22,9 +22,9 @@ public class PlaneMath {
 	}
 	
 	public static Vector3f rayIntersection(Vector3f origin, Vector3f direction, Vector3f p0, Vector3f normal) {
-		float denominator = Vector3f.dot(normal, direction);
-		if(Math.abs(denominator) > EPSILON) {
-			float t = Vector3f.dot(Vector3f.sub(p0, origin, null), normal) / denominator;
+		float nDotD = Vector3f.dot(normal, direction);
+		if(Math.abs(nDotD) > EPSILON) {
+			float t = Vector3f.dot(Vector3f.sub(p0, origin, null), normal) / nDotD;
 			if(t >= 0) return Vector3f.add(origin, VectorMath.mul(direction, t, null), null);
 		}
 		

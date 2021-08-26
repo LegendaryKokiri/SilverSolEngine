@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector2f;
 import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
@@ -94,16 +95,8 @@ public class Landscape extends Volume {
 			t[2] = new Vector3f(rightX, heights[gridX + 1][gridZ], backZ);
 		}
 		
-//		System.out.println("Planar from " + leftX + " - " + rightX + ", " + backZ + " - " + frontZ + " (" + upperLeft + ")");
-				
-		Vector3f centroid = VectorMath.mean(t[0], t[1], t[2]);
-		Vector3f.sub(t[0], centroid, t[0]);
-		Vector3f.sub(t[1], centroid, t[1]);
-		Vector3f.sub(t[2], centroid, t[2]);
-//		System.out.println("Centroid = " + centroid);
-				
-		Planar planar = new Planar(new Vector3f[]{t[0], t[1], t[2]}, Type.SOLID, null);
-		planar.setBodyOffset(MatrixMath.createTransformation(centroid, new Vector3f(), new Vector3f(1f, 1f, 1f)));
+		Planar planar = new Planar(new Vector3f[]{t[0], t[1], t[2]}, this.type, null);
+		planar.setBodyOffset(this.bodyOffset);
 		planar.setBody(this.body);
 		planar.setID(this.ID);
 		return planar;
@@ -155,20 +148,12 @@ public class Landscape extends Volume {
 			
 			if(validSquare) {
 				Planar p = generatePlanar(gridX, gridZ, true);
-				intersection = p.raycast(origin, direction, maxLength, true); //TODO: Did we really construct the planars such that origin and direction would be considered local?
-			
-				if(intersection != null) {
-					if(global) return new Vector3f[]{toGlobalPosition(intersection[0]), toGlobalDirection(intersection[1])};
-					return intersection;
-				}
+				intersection = p.raycast(globalOrigin, globalDirection, maxLength, global); //TODO: Did we really construct the planars such that origin and direction would be considered local?
+				if(intersection != null) return intersection;
 				
 				p = generatePlanar(gridX, gridZ, false);
-				intersection = p.raycast(origin, direction, maxLength, true); //TODO: Did we really construct the planars such that origin and direction would be considered local?
-			
-				if(intersection != null) {
-					if(global) return new Vector3f[]{toGlobalPosition(intersection[0]), toGlobalDirection(intersection[1])};
-					return intersection;
-				}
+				intersection = p.raycast(globalOrigin, globalDirection, maxLength, global); //TODO: Did we really construct the planars such that origin and direction would be considered local?
+				if(intersection != null) return intersection;
 			}
 			
 			float tToNext = Math.min(tToX, tToZ);
@@ -334,16 +319,12 @@ public class Landscape extends Volume {
 	//TODO: xPosition needs to be localized with respect to the Landscape for this to work with any input. Make sure all calls localize.
 	private int getGridX(float localX) {
 		int gridX = (int) ((localX + halfWidth) / gridSizeX);
-		if(gridX < 0) return -1;
-		if(gridX >= xPoints - 1) return xPoints - 1;
 		return gridX;
 	}
 	
 	//TODO: zPosition needs to be localized with respect to the Landscape for this to work with any input. Make sure all calls localize.
 	private int getGridZ(float localZ) {
 		int gridZ = (int) ((localZ + halfDepth) / gridSizeZ);
-		if(gridZ < 0) return -1;
-		if(gridZ >= zPoints - 1) return zPoints - 1;
 		return gridZ;
 	}
 	
@@ -453,42 +434,28 @@ public class Landscape extends Volume {
 			{0f,0f,0f,0f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,0f,0f,0f,0f}}, Type.SOLID, null);
 		landscape.setID(2);
 		
+		Landscape highLandscape = new Landscape(10f, 40f, 10f, new float[][]{
+			{0f,0f,0f,0f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,0f,0f,0f,0f}}, Type.SOLID, null);
+		highLandscape.setID(3);
+		
 		Body terrainBody = new Body();
 		terrainBody.addVolume(landscape);
 		
-		/*
-		Body sphereBody = new Body();
-		Sphere sphere = new Sphere(1f, Type.SOLID, null);
-		sphere.setID(1);
-		sphereBody.addVolume(sphere);
-		sphereBody.setPosition(-2f, 10.9f, 0f);
-				
-		Collision[] collisions = landscape.testForResolutions(sphere);
-		
-		if(collisions != null) {
-			for(Collision collision : collisions) {
-				System.out.println(collision + " with normal " + collision.getSeparatingAxis(sphere) + " and depth " + collision.getPenetrationDepth());
-				System.out.println(collision.getColliderA());
-				System.out.println("Global A: " + collision.getGlobalContactA());
-				System.out.println("Global B: " + collision.getGlobalContactB());
-			}
-		}
-		*/
-		
-		/*
-		Vector2f[] pollPoints = new Vector2f[] {new Vector2f(-4.9f, -4.9f), new Vector2f(-1.8f, -1.8f), new Vector2f(-1.5f, -3.633f)};
-		for(Vector2f poll : pollPoints) System.out.println("Upper Left? " + landscape.upperLeft(poll.x, poll.y));
-		*/
+		Body highBody = new Body();
+		highBody.setPosition(0f, 100f, 0f);
+		highBody.addVolume(highLandscape);
 		
 		Vector3f testCases[][] = new Vector3f[][] {
-			{new Vector3f(4f, 9f, -9f), new Vector3f(0f, 0f, 1f)},
-			{new Vector3f(0f, 15f, 5.01f), new Vector3f(0f, 0f, -1f)},
-			{new Vector3f(0f, 50f, 0f), new Vector3f(0f, -1f, 0f)},
-			{new Vector3f(5.01f, 15f, 0f), new Vector3f(-0.707f, -0.707f, 0f)},
-			{new Vector3f(-5.01f, 15f, 0f), new Vector3f(0.707f, -0.707f, 0f)},
-			{new Vector3f(0f, 15f, 5.01f), new Vector3f(0f, -0.707f, -0.707f)},
-			{new Vector3f(0f, 15f, -5.01f), new Vector3f(0f, -0.707f, 0.707f)}};
-		
+//			{new Vector3f(4f, 9f, -9f), new Vector3f(0f, 0f, 1f)},
+//			{new Vector3f(0f, 15f, 5.01f), new Vector3f(0f, 0f, -1f)},
+//			{new Vector3f(0f, 50f, 0f), new Vector3f(0f, -1f, 0f)},
+			{new Vector3f(10.01f, 15f, 0f), new Vector3f(-0.707f, -0.707f, 0f)},
+			{new Vector3f(10.01f, 115f, 0f), new Vector3f(-0.707f, -0.707f, 0f)},
+			{new Vector3f(0f, 15f, -10.01f), new Vector3f(0f, -0.707f, 0.707f)},
+			{new Vector3f(0f, 115f, -10.01f), new Vector3f(0f, -0.707f, 0.707f)},
+//			{new Vector3f(15.01f, 15f, 0f), new Vector3f(-0.866f, -0.500f, 0f)},
+//			{new Vector3f(15.01f, 115f, 0f), new Vector3f(-0.866f, -0.500f, 0f)},
+		};
 		
 		Vector3f intersection[] = null;
 		int i = 1;
@@ -498,9 +465,18 @@ public class Landscape extends Volume {
 			intersection = landscape.raycast(testCase[0], testCase[1], 20f, true);
 			
 			if(intersection == null) {
-				System.out.println("Raycast collided with nothing");
+				System.out.println("Raycast missed Landscape");
 			} else {
-				System.out.println("Raycast intersection point = " + intersection[0]);
+				System.out.println("Landscape intersection point = " + intersection[0]);
+				System.out.println("\tNormal = " + intersection[1]);
+			}
+			
+			intersection = highLandscape.raycast(testCase[0], testCase[1], 20f, true);
+			
+			if(intersection == null) {
+				System.out.println("Raycast missed high Landscape");
+			} else {
+				System.out.println("High landscape intersection point = " + intersection[0]);
 				System.out.println("\tNormal = " + intersection[1]);
 			}
 			
