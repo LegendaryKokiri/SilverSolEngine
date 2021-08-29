@@ -169,8 +169,9 @@ public class Planar extends Volume {
 		for(int i = 0; i < vertices.length; i++) {
 			//TODO: Having a set of normalised edges would speed this up by saving us from having to normalise.
 			//TODO: Better yet, we can just precompute the separating axes in local space and globalize them
-			Vector3f local = Vector3f.cross(normal, Vector3f.sub(vertices[(i+1) % vertices.length], vertices[i], null), null);
-			edges[i] = new SepEdge(this.toGlobalDirection(local));
+			Vector3f end1 = toGlobalPosition(vertices[i]);
+			Vector3f end2 = toGlobalPosition(vertices[(i+1) % vertices.length]);
+			edges[i] = new SepEdge(Vector3f.sub(end2, end1, null), end1, end2);
 		}
 		
 		return edges;

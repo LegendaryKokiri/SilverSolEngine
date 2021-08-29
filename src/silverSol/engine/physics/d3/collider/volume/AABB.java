@@ -83,7 +83,23 @@ public class AABB extends Volume {
 	
 	@Override
 	public SepEdge[] getSeparatingEdges(Planar planar) {
-		return new SepEdge[] {new SepEdge(X), new SepEdge(Y), new SepEdge(Z)};
+		Vector3f dP = toLocalPosition(planar.position);
+		
+		float posX = position.x + halfLengths[0];
+		float negX = position.x - halfLengths[0];
+		float posY = position.y + halfLengths[1];
+		float negY = position.y - halfLengths[1];
+		float posZ = position.z + halfLengths[2];
+		float negZ = position.z - halfLengths[2];
+		
+		float closeX = dP.x > 0f ? posX : negX;
+		float closeY = dP.y > 0f ? posY : negY;
+		float closeZ = dP.z > 0f ? posZ : negZ;
+		
+		return new SepEdge[] {
+				new SepEdge(X, new Vector3f(negX, closeY, closeZ), new Vector3f(posX, closeY, closeZ)),
+				new SepEdge(Y, new Vector3f(closeX, negY, closeZ), new Vector3f(closeX, posY, closeZ)),
+				new SepEdge(Z, new Vector3f(closeX, closeY, negZ), new Vector3f(closeX, closeY, posZ))};
 	}
 	
 	public Vector3f closestPointTo(Vector3f globalPoint, boolean global) {
@@ -101,7 +117,7 @@ public class AABB extends Volume {
 		boolean yBetween = -halfX < vLocal.x && vLocal.x < halfX;
 		boolean zBetween = -halfX < vLocal.x && vLocal.x < halfX;
 		
-		//If the point is not on the extremem on any axis, then localPoint was inside the shape.
+		//If the point is not on the extreme on any axis, then localPoint was inside the shape.
 		//We therefore must find the closest point on the surface.
 		if(xBetween && yBetween && zBetween) {
 			float xDist = xBetween ? halfX - Math.abs(vLocal.x) : Float.POSITIVE_INFINITY;

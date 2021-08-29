@@ -134,7 +134,14 @@ public class Capsule extends Volume {
 	
 	@Override
 	public SepEdge[] getSeparatingEdges(Planar planar) {
-		return new SepEdge[] {new SepEdge(toGlobalDirection(UP))};
+		Vector3f dP = toLocalPosition(planar.position);
+		Vector3f toEdge = VectorMath.mul(VectorMath.gramSchmidt(UP, dP, null), radius, null);
+		
+		Vector3f toCylBound = VectorMath.mul(UP, halfCyl, null);
+		Vector3f end1 = toGlobalPosition(Vector3f.add(toEdge, toCylBound, null));
+		Vector3f end2 = toGlobalPosition(Vector3f.sub(toEdge, toCylBound, null));
+		
+		return new SepEdge[] {new SepEdge(toGlobalDirection(UP), end1, end2)};
 	}
 	
 	public Vector3f closestPointTo(Vector3f globalPoint, boolean global) {

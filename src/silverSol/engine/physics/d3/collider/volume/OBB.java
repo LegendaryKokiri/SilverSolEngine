@@ -153,7 +153,27 @@ public class OBB extends Volume {
 		Vector3f y = toGlobalDirection(new Vector3f(0f, 1f, 0f));
 		Vector3f z = toGlobalDirection(new Vector3f(0f, 0f, 1f));
 		
-		return new SepEdge[] {new SepEdge(x), new SepEdge(y), new SepEdge(z)};
+		
+		Vector3f toPosX = VectorMath.mul(x, e[0], null);
+		Vector3f toNegX = VectorMath.mul(x, -e[0], null);
+		Vector3f toPosY = VectorMath.mul(y, e[1], null);
+		Vector3f toNegY = VectorMath.mul(y, -e[1], null);
+		Vector3f toPosZ = VectorMath.mul(z, e[2], null);
+		Vector3f toNegZ = VectorMath.mul(z, -e[2], null);
+		
+		Vector3f dP = toLocalPosition(planar.position);
+		Vector3f toCloseX = dP.x > 0f ? toPosX : toNegX;
+		Vector3f toCloseY = dP.y > 0f ? toPosY : toNegY;
+		Vector3f toCloseZ = dP.z > 0f ? toPosZ : toNegZ;
+		
+		Vector3f centerX = Vector3f.add(position, Vector3f.add(toCloseY, toCloseZ, null), null);
+		Vector3f centerY = Vector3f.add(position, Vector3f.add(toCloseX, toCloseZ, null), null);
+		Vector3f centerZ = Vector3f.add(position, Vector3f.add(toCloseX, toCloseY, null), null);
+		
+		return new SepEdge[] {
+				new SepEdge(x, Vector3f.add(toNegX, centerX, null), Vector3f.add(toPosX, centerX, null)),
+				new SepEdge(y, Vector3f.add(toNegY, centerY, null), Vector3f.add(toPosY, centerY, null)),
+				new SepEdge(z, Vector3f.add(toNegZ, centerZ, null), Vector3f.add(toPosZ, centerZ, null))};		
 	}
 	
 	public Vector3f closestPointTo(Vector3f globalPoint, boolean global) {

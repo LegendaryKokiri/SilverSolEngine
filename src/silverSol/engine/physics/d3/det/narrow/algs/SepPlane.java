@@ -7,21 +7,14 @@ import org.lwjgl.util.vector.Vector3f;
  * @author Julian
  *
  */
-public class SepPlane {
-	
-	private Vector3f normal;
-	
+public class SepPlane extends Separator{
+		
 	/**
 	 * Creates a separating plane object
-	 * @param normal The normal of the separating plane
-	 * @param resolution In which directions should the OTHER body resolve along this axis?
+	 * @param direction The normal of the separating plane
 	 */
-	public SepPlane(Vector3f normal) {
-		this.normal = new Vector3f(normal);
-	}
-	
-	public Vector3f getNormal() {
-		return normal;
+	public SepPlane(Vector3f direction) {
+		super(direction);
 	}
 
 }

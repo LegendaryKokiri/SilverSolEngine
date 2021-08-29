@@ -129,7 +129,9 @@ public class Hull extends Volume {
 		SepEdge[] edges = new SepEdge[indices.length];
 		
 		for(int i = 0; i < edges.length; i++) {
-			edges[i] = new SepEdge(Vector3f.sub(vertices[indices[(i+1)%indices.length]], vertices[indices[i]], null));
+			Vector3f end1 = toGlobalPosition(vertices[indices[i]]);
+			Vector3f end2 = toGlobalPosition(vertices[indices[(i+1)%indices.length]]);
+			edges[i] = new SepEdge(Vector3f.sub(end2, end1, null), end1, end2);
 		}
 		
 		return edges;
