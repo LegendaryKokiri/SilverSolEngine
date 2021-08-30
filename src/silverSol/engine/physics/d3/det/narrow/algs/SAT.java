@@ -38,21 +38,30 @@ public class SAT {
 			collision.setColliderA(v1);
 			collision.setColliderB(v2);
 			
+			Vector3f[] globals = null;
+			
 			if(s2 == null) { //Face normal is minimum separation direction
 				
 				//TODO: For this prototypical face, we will accept any point on the incident face.
 				//TODO: However, the proper thing to do would be to clip the plane. You saved the PowerPoint for reference.
 				Vector3f localA = v1.supportMap(collision.getSeparatingAxis(v2), false);
-				collision.setContactA(localA, v1.toGlobalPosition(localA));
 				Vector3f localB = v2.supportMap(collision.getSeparatingAxis(v1), false);
-				collision.setContactB(localB, v2.toGlobalPosition(localB));
+				globals = new Vector3f[] {v1.toGlobalPosition(localA), v2.toGlobalPosition(localB)};
+				collision.setContactA(localA, globals[0]);
+				collision.setContactB(localB, globals[1]);
 				
 			} else { //Edge normal is minimum separation direction
 				SepEdge e1 = (SepEdge) s1;
 				SepEdge e2 = (SepEdge) s2;
-				Vector3f[] globals = SegmentMath.closestPoints(e1.getEnd1(), e1.getEnd2(), e2.getEnd1(), e2.getEnd2());
+				globals = SegmentMath.closestPoints(e1.getEnd1(), e1.getEnd2(), e2.getEnd1(), e2.getEnd2());
 				collision.setContactA(v1.toLocalPosition(globals[0]), globals[0]);
 				collision.setContactB(v2.toLocalPosition(globals[1]), globals[1]);
+			}
+			
+			//Maintain convention of pointing from A into B for cross-product edges
+			if(s2 != null && Vector3f.dot(collision.getSeparatingAxis(), Vector3f.sub(globals[1], globals[0], null)) < 0f) {
+				collision.setSeparatingAxis(collision.getSeparatingAxis().negate(null));
+				System.out.println("Negating face");
 			}
 		}
 	}
@@ -64,7 +73,7 @@ public class SAT {
 	 * @return A Collision object if a collision occurs, else null
 	 */
 	public static Collision detect(Planar p, Volume v) {
-		return run(p, v, false);
+		return run(p, v, false, false);
 	}
 	
 	/**
@@ -75,44 +84,50 @@ public class SAT {
 	 * @return A Collision object if a collision occurs, else null
 	 */
 	public static Collision run(Planar p, Volume v) {
-		return run(p, v, true);
+		return run(p, v, false, true);
 	}
 	
-	private static Collision run(Planar p, Volume v, boolean detailed) {		
-		Collision collision = new Collision();
-		collision.setPenetrationDepth(Float.POSITIVE_INFINITY);
+	public static Collision run(Planar p, Volume v, boolean resolveOnNormal) {
+		return run(p, v, resolveOnNormal, true);
+	}
+	
+	private static Collision run(Planar p, Volume v, boolean normalResolve, boolean detailed) {		
+		Collision c = new Collision();
+		c.setPenetrationDepth(Float.POSITIVE_INFINITY);
 		
-		MinFeatures minFeatures = new MinFeatures();
+		MinFeatures min = new MinFeatures();
 		
 		Vector3f disp = Vector3f.sub(v.getPosition(), p.getPosition(), null);
 				
-		if(!checkFaces(collision, minFeatures, p.getSeparatingPlanes(null), p, v, disp)) return null;
-		if(!checkFaces(collision, minFeatures, v.getSeparatingPlanes(p), p, v, disp)) return null;
-		if(!checkEdges(collision, minFeatures, p.getSeparatingEdges(null), v.getSeparatingEdges(p), p, v, disp)) return null;
+		if(!checkFaces(c, min, p.getSeparatingPlanes(null), p, v, disp, false, true)) return null;
+		if(!checkFaces(c, min, v.getSeparatingPlanes(p), p, v, disp, true, !normalResolve)) return null;
+		if(!checkEdges(c, min, p.getSeparatingEdges(null), v.getSeparatingEdges(p), p, v, disp, !normalResolve)) return null;
 		
-		minFeatures.updateCollision(collision, p, v);
+		min.updateCollision(c, p, v);
 		
-		return collision;
+		return c;
 	}
 	
-	private static boolean checkFaces(Collision collision, MinFeatures minFeatures, SepPlane[] faces, Volume v1, Volume v2, Vector3f disp) {		
+	private static boolean checkFaces(Collision collision, MinFeatures min, SepPlane[] faces, Volume v1, Volume v2, Vector3f disp,
+			boolean negateAxes, boolean resolveDirections) {		
 		for(SepPlane face : faces) {
-			Vector3f axis = new Vector3f(face.getDirection());
+			Vector3f axis = negateAxes ? new Vector3f(face.getDirection().negate(null)) : new Vector3f(face.getDirection());
 			float penetration = checkAxis(collision, axis, v1, v2, disp);
 			
 			if(Float.isNaN(penetration)) return false;
 			
-			if(penetration < collision.getPenetrationDepth()) {
+			if(penetration < collision.getPenetrationDepth() && resolveDirections) {
 				collision.setSeparatingAxis(axis);
 				collision.setPenetrationDepth(penetration);
-				minFeatures.setMinFace(face);
+				min.setMinFace(face);
 			}
 		}
 		
 		return true;
 	}
 	
-	private static boolean checkEdges(Collision collision, MinFeatures minFeatures, SepEdge[] edges1, SepEdge[] edges2, Volume v1, Volume v2, Vector3f disp) {
+	private static boolean checkEdges(Collision collision, MinFeatures min, SepEdge[] edges1, SepEdge[] edges2, Volume v1, Volume v2,
+			Vector3f disp, boolean resolveDirections) {
 		for(SepEdge edge1 : edges1) {
 			for(SepEdge edge2 : edges2) {
 				Vector3f axis = Vector3f.cross(edge1.getDirection(), edge2.getDirection(), null);
@@ -123,10 +138,10 @@ public class SAT {
 				
 				if(Float.isNaN(penetration)) return false;
 				
-				if(penetration < collision.getPenetrationDepth()) {
+				if(penetration < collision.getPenetrationDepth() && resolveDirections) {
 					collision.setSeparatingAxis(axis);
 					collision.setPenetrationDepth(penetration);
-					minFeatures.setMinEdges(edge1, edge2);
+					min.setMinEdges(edge1, edge2);
 				}
 			}
 		}
@@ -135,8 +150,6 @@ public class SAT {
 	}
 	
 	private static float checkAxis(Collision collision, Vector3f axis, Volume v1, Volume v2, Vector3f disp) {
-		//Maintain convention of pointing from A into B
-		if(Vector3f.dot(axis, disp) < 0f) axis.negate(axis);
 		Vector3f nAxis = axis.negate(null);
 				
 		float min1 = Vector3f.dot(v1.supportMap(nAxis, true), axis);

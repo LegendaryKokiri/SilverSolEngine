@@ -142,7 +142,7 @@ public class Landscape extends Volume {
 //		float tStepDiagonal = ;
 		
 		Vector3f[] intersection = null;
-		
+		 
 		while(t < maxLength) {
 			boolean validSquare = validGridX(gridX) && validGridZ(gridZ);
 			
@@ -257,15 +257,16 @@ public class Landscape extends Volume {
 		return c;
 	}
 	
+	//TODO: Why isn't this using SAT? Yowza, this is terrifying...
 	private Collision testCollision(Volume volume, Planar planar) {
 		if(planar == null) return null;
 		return GJK.detect(planar, volume);
 	}
 	
 	private Collision testResolution(Volume volume, Planar planar) {
-		Collision collision = SAT.run(planar, volume);
+		Collision collision = SAT.run(planar, volume, true);
 		if(collision == null) return null;
-		
+				
 		Vector3f localA = toLandscapeLocal(planar, collision.getLocalContactB());
 		Vector3f globalA = this.toGlobalPosition(localA);
 		collision.setContactA(localA, globalA);

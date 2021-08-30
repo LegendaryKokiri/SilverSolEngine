@@ -37,6 +37,7 @@ public class CollisionResolution {
 			volumeB.addCollision(collision);
 			
 			if(volumeA.oughtResolve() && volumeB.oughtResolve()) {
+				//Volume A gets priority in the case of a tie.
 				if(volumeB.getModPriority() > volumeA.getModPriority()) volumeB.modifyCollision(collision);
 				else volumeA.modifyCollision(collision);
 				

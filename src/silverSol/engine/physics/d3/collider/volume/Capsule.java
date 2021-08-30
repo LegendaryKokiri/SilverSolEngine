@@ -9,11 +9,13 @@ import silverSol.engine.physics.d3.det.narrow.algs.EPA;
 import silverSol.engine.physics.d3.det.narrow.algs.GJK;
 import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
 import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
+import silverSol.math.NumberMath;
 import silverSol.math.VectorMath;
 
 public class Capsule extends Volume {
 	
 	private static final Vector3f UP = new Vector3f(0f, 1f, 0f);
+	private static final float DEG_15 = (float) Math.toRadians(15.0);
 	
 	private float halfCyl;
 	private float radius;
@@ -141,7 +143,12 @@ public class Capsule extends Volume {
 		Vector3f end1 = toGlobalPosition(Vector3f.add(toEdge, toCylBound, null));
 		Vector3f end2 = toGlobalPosition(Vector3f.sub(toEdge, toCylBound, null));
 		
-		return new SepEdge[] {new SepEdge(toGlobalDirection(UP), end1, end2)};
+		Vector3f circleCenter = new Vector3f(0f, NumberMath.clamp(dP.y, -halfCyl, halfCyl), 0f);
+		Vector3f chord1 = toGlobalPosition(Vector3f.add(circleCenter, VectorMath.rotate(toEdge, UP, -DEG_15, null), null));
+		Vector3f chord2 = toGlobalPosition(Vector3f.add(circleCenter, VectorMath.rotate(toEdge, UP, DEG_15, null), null));
+		Vector3f chord = Vector3f.sub(chord2, chord1, null).normalise(null);
+		
+		return new SepEdge[] {new SepEdge(toGlobalDirection(UP), end1, end2), new SepEdge(chord, chord1, chord2)};
 	}
 	
 	public Vector3f closestPointTo(Vector3f globalPoint, boolean global) {
