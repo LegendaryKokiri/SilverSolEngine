@@ -58,50 +58,56 @@ public class AnimationParser {
 	
 	private static void parseAnimations(BufferedReader reader, Bone armature) throws IOException {
 		List<ModelAnimation> animations = new ArrayList<>();
-		
-		ModelAnimation currentAnimation = new ModelAnimation();
+	    float sourceFps = 24f;
+	    float targetFps = 60f;
+	    float fpsRatio = targetFps / sourceFps;
+	    float secondsPerFrame = 1f / targetFps;
+	    
 	    String animationName = "";
-		
 		Map<Integer, List<Keyframe>> keyframes = new HashMap<>();
-		int currentFrame = 0, frameLength = 0;
+		int currentFrame = 0;
+		int frameCount = 0;
 		int animationIndex = 0;
-	    float fps = 30f;
+		boolean oughtLoop = false;
 	    
 	    Map<Integer, Matrix4f> frameTransformations = new HashMap<>();
 	    
 	    String line = "";
 		
 		while((line = reader.readLine()) != null) {
-			if(line.startsWith("ANIMATION:")) {
+			if(line.startsWith("FPS:")) {
+				
+				//TODO: Since the model converter doesn't export framerate data, this will always be set to default. It's fine for now, but it needs to be implemented in Python and Java
+				String[] data = line.split(" ");
+				sourceFps = (float) Integer.parseInt(data[1]);
+				targetFps = (float) Integer.parseInt(data[2]);
+				fpsRatio = targetFps / sourceFps;
+				
+			} else if(line.startsWith("ANIMATION:")) {
 
 				animationName = line.split(" ")[1];
-				currentAnimation.setName(animationName);
-				currentAnimation.setOughtLoop(animationName.contains("Loop"));
-				currentAnimation.setIndex(animationIndex++);
+				oughtLoop = animationName.contains("Loop");
 				
 			} else if(line.endsWith("Frames")) {
 				
-				frameLength = Integer.parseInt(line.split(" ")[0]);
+				frameCount = (int) (Float.parseFloat(line.split(" ")[0]) * fpsRatio);
 
 			} else if(line.startsWith("Frame")) {
 				
-				storeFrame(keyframes, frameTransformations, armature, currentFrame, fps);
+				storeFrame(keyframes, frameTransformations, armature, (int) (currentFrame * fpsRatio), targetFps);
 				currentFrame = Integer.parseInt(line.split(" ")[1]);
 				
 			} else if(line.equals("END OF ANIMATION")) {
-				storeFrame(keyframes, frameTransformations, armature, currentFrame, fps);
-				
-				//At the end, we have all of this data for certain, so we can add it into the animation data structure now.
-				currentAnimation.setAnimationTimeLength((float) (frameLength) / fps);
-				currentAnimation.setKeyframes(keyframes);
-				
+				storeFrame(keyframes, frameTransformations, armature, (int) (currentFrame * fpsRatio), targetFps);
+								
 				//Add the animation
-				animations.add(currentAnimation);
+				ModelAnimation animation = new ModelAnimation(animationName, frameCount, secondsPerFrame, keyframes);
+				animation.setIndex(animationIndex++);
+				animation.setOughtLoop(oughtLoop);
+				animations.add(animation);
 				
 				//Reset all animation data we've gained so far
-				currentAnimation = new ModelAnimation();
 				keyframes = new HashMap<>();
-				currentFrame = frameLength = 0;
 				
 			} else if(line.length() > 0) {
 				

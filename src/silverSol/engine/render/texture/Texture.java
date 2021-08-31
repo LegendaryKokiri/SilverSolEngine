@@ -11,7 +11,6 @@ import java.util.List;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL30;
-import org.lwjgl.util.vector.Vector2f;
 import org.newdawn.slick.opengl.TextureLoader;
 
 import silverSol.engine.render.animation.texture.TextureAnimation;
@@ -27,9 +26,9 @@ public class Texture {
 	protected boolean hasAnimations;
 		protected List<TextureAnimation> animations;
 	
-	public static final int ANIMATION_SINGLE = 70001;
-	public static final int ANIMATION_ROWS = 70002;
-	public static final int ANIMATION_COLUMNS = 70003;
+	public static enum FrameLayout {
+		SINGLE, ROWS, COLUMNS
+	}
 	
 	private float shineDamper;
 	private float reflectivity;
@@ -136,25 +135,25 @@ public class Texture {
 		this.hasAnimations = animations != null && animations.size() > 0;
 	}
 
-	public void generateAnimations(int animationLayout, Float... fps) {
-		if(animationLayout == ANIMATION_SINGLE) generateSingleAnimation(fps);
-		else if(animationLayout == ANIMATION_ROWS) generateRowAnimations(fps);
-		else if(animationLayout == ANIMATION_COLUMNS) generateColumnAnimations(fps);
+	public void generateAnimations(FrameLayout frameLayout, Float... fps) {
+		if(frameLayout == FrameLayout.SINGLE) generateSingleAnimation(fps);
+		else if(frameLayout == FrameLayout.ROWS) generateRowAnimations(fps);
+		else if(frameLayout == FrameLayout.COLUMNS) generateColumnAnimations(fps);
 	}
 	
 	private void generateSingleAnimation(Float... fps) {
 		List<TextureAnimation> animations = new ArrayList<>();
-		List<Vector2f> frameOffsets = new ArrayList<>();
+		List<float[]> frameBounds = new ArrayList<>();
 		
 		float rowCount = (float) numberOfRows;
 		
 		for(int i = 0; i < numberOfRows; i++) {
 			for(int j = 0; j < numberOfRows; j++) {
-				frameOffsets.add(new Vector2f((float) j / rowCount, (float) i / rowCount));
+				frameBounds.add(new float[] {(float) j / rowCount, (float) (i+1) / rowCount, (float) (j+1) / rowCount, (float) i / rowCount });
 			}
 		}
 		
-		animations.add(new TextureAnimation(frameOffsets, fps[0]));
+		animations.add(new TextureAnimation(frameBounds, fps[0]));
 		
 		setAnimations(animations);
 	}
@@ -165,13 +164,13 @@ public class Texture {
 		float rowCount = (float) numberOfRows;
 		
 		for(int i = 0; i < numberOfRows; i++) {
-			List<Vector2f> frameOffsets = new ArrayList<>();
+			List<float[]> frameBounds = new ArrayList<>();
 			
 			for(int j = 0; j < numberOfRows; j++) {
-				frameOffsets.add(new Vector2f((float) j / rowCount, (float) i / rowCount));
+				frameBounds.add(new float[] {(float) j / rowCount, (float) (i+1) / rowCount, (float) (j+1) / rowCount, (float) i / rowCount });
 			}
 			
-			animations.add(new TextureAnimation(frameOffsets, fps[i]));
+			animations.add(new TextureAnimation(frameBounds, fps[i]));
 		}
 		
 		setAnimations(animations);
@@ -183,13 +182,13 @@ public class Texture {
 		float rowCount = (float) numberOfRows;
 		
 		for(int i = 0; i < numberOfRows; i++) {
-			List<Vector2f> frameOffsets = new ArrayList<>();
+			List<float[]> frameBounds = new ArrayList<>();
 			
 			for(int j = 0; j < numberOfRows; j++) {
-				frameOffsets.add(new Vector2f((float) i / rowCount, (float) j / rowCount));
+				frameBounds.add(new float[] {(float) j / rowCount, (float) (i+1) / rowCount, (float) (j+1) / rowCount, (float) i / rowCount });
 			}
 			
-			animations.add(new TextureAnimation(frameOffsets, fps[i]));
+			animations.add(new TextureAnimation(frameBounds, fps[i]));
 		}
 		
 		setAnimations(animations);

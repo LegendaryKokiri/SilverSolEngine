@@ -1,6 +1,5 @@
 package silverSol.engine.render.animation.model;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,19 +14,25 @@ public class ModelAnimation {
 	private boolean oughtLoop;
 	
 	//Animation Length
-	private float animationTimeLength;
+	private int frameCount;
+	private float secondsPerFrame;
+	private float timeLength;
 	
 	//Takes in the bone's index and returns the keyframes associated with that bone.
 	private Map<Integer, List<Keyframe>> keyframes;
 	
-	public ModelAnimation() {
-		this.name = "";
+	public ModelAnimation(String name, int frameCount, float secondsPerFrame, Map<Integer, List<Keyframe>> keyframes) {
+		this.name = name;
 		this.transition = false;
 		this.index = 0;
 		
 		this.oughtLoop = false;
-		this.animationTimeLength = 0;
-		this.keyframes = new HashMap<>();
+		
+		this.frameCount = frameCount;
+		this.secondsPerFrame = secondsPerFrame;
+		this.timeLength = (float)(frameCount) * secondsPerFrame;
+		
+		this.keyframes = keyframes;
 	}
 	
 	public String getName() {
@@ -61,13 +66,17 @@ public class ModelAnimation {
 	public void setOughtLoop(boolean oughtLoop) {
 		this.oughtLoop = oughtLoop;
 	}
+	
+	public int getFrameCount() {
+		return frameCount;
+	}
 
-	public float getAnimationTimeLength() {
-		return animationTimeLength;
+	public float getSecondsPerFrame() {
+		return secondsPerFrame;
 	}
 	
-	public void setAnimationTimeLength(float animationTimeLength) {
-		this.animationTimeLength = animationTimeLength;
+	public float getTimeLength() {
+		return timeLength;
 	}
 
 	public Map<Integer, List<Keyframe>> getKeyframes() {
@@ -76,14 +85,6 @@ public class ModelAnimation {
 	
 	public List<Keyframe> getKeyframes(int boneIndex) {
 		return keyframes.get(boneIndex);
-	}
-	
-	public void addKeyframes(int boneIndex, List<Keyframe> keyframes) {
-		this.keyframes.put(boneIndex, keyframes);
-	}
-	
-	public void setKeyframes(Map<Integer, List<Keyframe>> keyframes) {
-		this.keyframes = keyframes;
 	}
 	
 	public Keyframe[] getActiveKeyframes(int boneIndex, float currentFrame) {

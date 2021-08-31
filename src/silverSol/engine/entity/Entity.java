@@ -83,7 +83,7 @@ public class Entity {
 	
 	public void animate(float dt) {
 		if(!animates) return;
-		animator.progressAnimation(dt);
+		animator.update(dt);
 	}
 
 	public void setAnimates(boolean animates) {

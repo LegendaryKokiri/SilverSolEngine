@@ -8,11 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
-import silverSol.engine.physics.d3.body.Body;
 import silverSol.engine.physics.d3.collider.Collider;
-import silverSol.engine.physics.d3.collider.ray.Ray;
-import silverSol.engine.physics.d3.collider.volume.Volume;
-import silverSol.engine.physics.d3.det.narrow.PairManager;
 
 public class BroadPhase {
 	//Greatest Entity ID given thus far
@@ -24,7 +20,7 @@ public class BroadPhase {
 	private List<Endpoint> xEndpoints;
 	private List<Endpoint> yEndpoints;
 	private List<Endpoint> zEndpoints;
-	
+		
 	public BroadPhase() {
 		greatestID = -1;
 		emptiedIDs = new LinkedList<>();
@@ -36,22 +32,23 @@ public class BroadPhase {
 		zEndpoints = new ArrayList<>();
 	}
 	
-	public void run(List<Body> bodies, PairManager pm) {
-		recalculateEndpoints(bodies);
-		reorderEndpoints(bodies);
-		addOverlappingPairs(pm, bodies);
+	public List<Collider[]> run() {
+		List<Collider[]> pairs = new ArrayList<>();
+		
+		recalculateEndpoints();
+		reorderEndpoints();
+		addOverlappingPairs(pairs);
+		
+		return pairs;
 	}
 	
-	private void recalculateEndpoints(List<Body> bodies) {
-		for(Body body : bodies) {
-			if(!body.isImmovable()) {
-				for(Volume volume : body.getVolumes()) volume.calculateEndpoints();
-				for(Ray ray : body.getRays()) ray.calculateEndpoints();
-			}
+	private void recalculateEndpoints() {
+		for(int colliderKey : loadedColliders.keySet()) {
+			loadedColliders.get(colliderKey).calculateEndpoints();
 		}
 	}
 	
-	private void reorderEndpoints(List<Body> bodies) {
+	private void reorderEndpoints() {
 		Collections.sort(xEndpoints);
 		Collections.sort(yEndpoints);
 		Collections.sort(zEndpoints);
@@ -63,26 +60,18 @@ public class BroadPhase {
 		}
 	}
 	
-	private void addOverlappingPairs(PairManager pm, List<Body> bodies) {
+	private void addOverlappingPairs(List<Collider[]> pairs) {
 		int length = greatestID + 1;
 		boolean[][][] overlapTracker = new boolean[length][length][3];
 		
-		for(Body body : bodies) {
-			for(Volume volume : body.getVolumes()) {
-				Endpoint[] endpoints = volume.getEndpoints();
-				int id = volume.getID();
-				recordOverlaps(overlapTracker, xEndpoints, endpoints[0].index, endpoints[1].index, id, 0);
-				recordOverlaps(overlapTracker, yEndpoints, endpoints[2].index, endpoints[3].index, id, 1);
-				recordOverlaps(overlapTracker, zEndpoints, endpoints[4].index, endpoints[5].index, id, 2);
-			}
+		for(int colliderKey : loadedColliders.keySet()) {
+			Collider collider = loadedColliders.get(colliderKey);
 			
-			for(Ray ray : body.getRays()) {
-				Endpoint[] endpoints = ray.getEndpoints();
-				int id = ray.getID();
-				recordOverlaps(overlapTracker, xEndpoints, endpoints[0].index, endpoints[1].index, id, 0);
-				recordOverlaps(overlapTracker, yEndpoints, endpoints[2].index, endpoints[3].index, id, 1);
-				recordOverlaps(overlapTracker, zEndpoints, endpoints[4].index, endpoints[5].index, id, 2);
-			}
+			Endpoint[] endpoints = collider.getEndpoints();
+			int id = collider.getID();
+			recordOverlaps(overlapTracker, xEndpoints, endpoints[0].index, endpoints[1].index, id, 0);
+			recordOverlaps(overlapTracker, yEndpoints, endpoints[2].index, endpoints[3].index, id, 1);
+			recordOverlaps(overlapTracker, zEndpoints, endpoints[4].index, endpoints[5].index, id, 2);
 		}
 		
 		for(int i: loadedColliders.keySet()) {
@@ -90,7 +79,7 @@ public class BroadPhase {
 				Collider c1 = loadedColliders.get(i);
 				Collider c2 = loadedColliders.get(j);
 				if(!c1.canCollideWith(c2) || !c2.canCollideWith(c1)) continue;
-				if(overlap(overlapTracker, i, j)) pm.addPair(loadedColliders.get(i), loadedColliders.get(j));
+				if(overlap(overlapTracker, i, j)) pairs.add(new Collider[]{loadedColliders.get(i), loadedColliders.get(j)});
 			}
 		}
 	}

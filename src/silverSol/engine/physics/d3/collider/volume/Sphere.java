@@ -59,8 +59,8 @@ public class Sphere extends Volume {
 		Vector3f intersection = Vector3f.add(globalOrigin, VectorMath.mul(globalDirection, distance, null), null);
 		Vector3f direction = Vector3f.sub(intersection, position, null).normalise(null);
 		
-		if(global) return new Vector3f[]{this.toGlobalPosition(intersection), this.toGlobalDirection(direction)};
-		return new Vector3f[]{intersection, direction};
+		if(global) return new Vector3f[]{intersection, direction};
+		else return new Vector3f[]{this.toLocalPosition(intersection), this.toLocalDirection(direction)};
 	}
 	
 	@Override

@@ -8,18 +8,15 @@ import silverSol.engine.physics.d3.collision.Collision;
 
 public class NarrowPhase {
 	
-	private PairManager pairManager;
 	private List<Collision> collisions;
 	
 	public NarrowPhase() {
-		pairManager = new PairManager();
 		collisions = new ArrayList<>();
 	}
 	
-	public void run() {
+	public void run(List<Collider[]> pairs) {
 		collisions.clear();
 		
-		List<Collider[]> pairs = pairManager.getPairs();
 		for(Collider[] pair : pairs) {
 			Collider collider1 = pair[0];
 			Collider collider2 = pair[1];
@@ -43,16 +40,11 @@ public class NarrowPhase {
 		}
 	}
 	
-	public PairManager getPairManager() {
-		return pairManager;
-	}
-	
 	public List<Collision> getCollisions() {
 		return collisions;
 	}
 	
 	public void clearData() {
-		pairManager.clearPairs();
 		collisions.clear();
 	}
 }

@@ -266,7 +266,8 @@ public class Landscape extends Volume {
 	private Collision testResolution(Volume volume, Planar planar) {
 		Collision collision = SAT.run(planar, volume, true);
 		if(collision == null) return null;
-				
+		
+		collision.setColliderA(this);
 		Vector3f localA = toLandscapeLocal(planar, collision.getLocalContactB());
 		Vector3f globalA = this.toGlobalPosition(localA);
 		collision.setContactA(localA, globalA);

@@ -32,10 +32,8 @@ public class CollisionDetection {
 	}
 	
 	public List<Collision> run(List<Body> bodies) {		
-		broadPhase.run(bodies, narrowPhase.getPairManager());
-		narrowPhase.run();
+		narrowPhase.run(broadPhase.run());
 		storeCollisions(bodies);
-		narrowPhase.getPairManager().clearPairs();
 		
 		return collisions;
 	}

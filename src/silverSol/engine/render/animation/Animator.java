@@ -25,20 +25,20 @@ public class Animator {
 	//Model Animation
 	private boolean animatingModel;
 	private List<ModelAnimation> modelAnimations;
-	private int currentModelAnimationIndex;
-	private ModelAnimation currentModelAnimation;
-	private int transitionModelAnimationIndex;
-	
-	//Model Animation Armature
-	private Bone armature;
+	private int modelIndex;
+	private ModelAnimation modelAnimation;
+	private int modelTransitionIndex;
 	
 	//Model Animation Progression
-	private float modelAnimationTime;
-	private float modelFrameProgression;
-	private int modelAnimationPlayCount;
+	private float modelTime;
+	private int modelFrame;
+	private int modelLoops;
 	private Map<Integer, Matrix4f> localTransforms;
 	private Map<Integer, Matrix4f> modelTransforms;
 	private Map<Integer, Matrix4f> parentTransforms;
+	
+	//Armature
+	private Bone armature;
 	
 	//External Animation Controls
 	private Map<Integer, Matrix4f> localControls;
@@ -46,81 +46,73 @@ public class Animator {
 	//Texture Animation
 	private boolean animatingTexture;
 	private List<TextureAnimation> textureAnimations;
-	private int currentTextureAnimationIndex;
+	private int textureIndex;
+	private TextureAnimation textureAnimation;
 	
 	//Texture Animation Progression
-	private float textureAnimationTime;
-	private float textureFrameProgression;
-	private int textureAnimationPlayCount;
-	private int textureCurrentFrame;
-	private int textureNextFrame;
+	private float textureTime;
+	private int textureFrame;
+	private int textureLoops;
 	
 	public Animator() {
 		this.animatingModel = false;
 		this.modelAnimations = new ArrayList<>();
-		this.currentModelAnimationIndex = 0;
 		
-		this.modelAnimationTime = 0;
-		this.modelFrameProgression = 0;
-		this.modelAnimationPlayCount = 0;
 		this.localTransforms = new HashMap<>();
 		this.modelTransforms = new HashMap<>();
-		this.localControls = new HashMap<>();
 		this.parentTransforms = new HashMap<>();
+		
+		this.localControls = new HashMap<>();
 		
 		this.animatingTexture = false;
 		this.textureAnimations = new ArrayList<>();
-		this.currentTextureAnimationIndex = 0;
-		
-		this.textureAnimationTime = 0;
-		this.textureFrameProgression = 0;
-		this.textureAnimationPlayCount = 0;
-		this.textureCurrentFrame = 0;
-		this.textureNextFrame = 0;
 	}
 
-	public void progressAnimation(float dt) {
-		progressModelAnimation(dt);
-		progressTextureAnimation(dt);
+	public void update(float dt) {
+		animateModel(dt);
+		animateTexture(dt);
 	}
 	
-	public void progressModelAnimation(float dt) {
+	public void animateModel(float dt) {
 		if(animatingModel && armature != null) {			
-			progressModelAnimationTime(currentModelAnimation, dt);
-			interpolateArmatureFromAnimation(armature, currentModelAnimation);
+			progressModelTime(modelAnimation, dt);
+			interpolateArmature(armature, modelAnimation);
 			positionArmature(armature, IDENTITY_MATRIX);
 		}
 	}
 	
-	private void progressModelAnimationTime(ModelAnimation animation, float dt) {
-		modelAnimationTime += dt;
-		if(modelAnimationTime > animation.getAnimationTimeLength()) {
-			modelAnimationPlayCount++;
-			if(animation.oughtLoop()) modelAnimationTime %= animation.getAnimationTimeLength();
-			if(animation.isTransition()) setCurrentModelAnimation(transitionModelAnimationIndex);
+	private void progressModelTime(ModelAnimation animation, float dt) {
+		modelTime += dt;
+		
+		if(modelTime > animation.getTimeLength()) {
+			modelLoops++;
+			if(animation.oughtLoop()) modelTime %= animation.getTimeLength();
+			if(animation.isTransition()) setModelAnimation(modelTransitionIndex);
 		}
+		
+		modelFrame = (int) (modelTime / animation.getSecondsPerFrame());
 	}
 	
-	private void interpolateArmatureFromAnimation(Bone armature, ModelAnimation animation) {
-		interpolateBoneFromAnimation(armature, animation);
+	private void interpolateArmature(Bone armature, ModelAnimation animation) {
+		interpolateBone(armature, animation);
 		for(Bone child : armature.getChildren()) {
-			interpolateArmatureFromAnimation(child, animation);
+			interpolateArmature(child, animation);
 		}
 	}
 	
-	private void interpolateBoneFromAnimation(Bone bone, ModelAnimation animation) {
+	private void interpolateBone(Bone bone, ModelAnimation animation) {
 		int boneIndex = bone.getIndex();
 		
-		Keyframe[] activeKeyframes = animation.getActiveKeyframes(boneIndex, modelAnimationTime);
+		Keyframe[] activeKeyframes = animation.getActiveKeyframes(boneIndex, modelTime);
 		Keyframe currentPose = activeKeyframes[0];
 		Keyframe nextPose = activeKeyframes[1];
 		
-		float proximityToCurrent = Keyframe.getProximityToNextFrame(currentPose, nextPose, modelAnimationTime, animation.getAnimationTimeLength());
+		float proximity = Keyframe.getProximityToNextFrame(currentPose, nextPose, modelTime, animation.getTimeLength());
 			
 		//Scale, rotate, and translate the matrix
-		Vector3f translation = VectorMath.interpolate(currentPose.getPosition(), nextPose.getPosition(), proximityToCurrent);
-		Quaternion rotation = QuaternionMath.interpolate(currentPose.getQuaternion(), nextPose.getQuaternion(), proximityToCurrent, null);
-		Vector3f scale = VectorMath.interpolate(currentPose.getScale(), nextPose.getScale(), proximityToCurrent);
+		Vector3f translation = VectorMath.interpolate(currentPose.getPosition(), nextPose.getPosition(), proximity);
+		Quaternion rotation = QuaternionMath.interpolate(currentPose.getQuaternion(), nextPose.getQuaternion(), proximity, null);
+		Vector3f scale = VectorMath.interpolate(currentPose.getScale(), nextPose.getScale(), proximity);
 		
 		Matrix4f boneTransformation = localTransforms.get(boneIndex);
 		boneTransformation.setIdentity();
@@ -147,38 +139,80 @@ public class Animator {
 		Matrix4f.mul(modelTransformation, bone.getInverseBindTransformation(), modelTransformation);
 	}
 	
-	public void progressTextureAnimation(float dt) {
-		if(animatingTexture) {
-			TextureAnimation animation = textureAnimations.get(currentTextureAnimationIndex);
-			textureAnimationTime += dt;
-			if(textureAnimationTime > animation.getAnimationTimeLength()) textureAnimationPlayCount++;
-			textureAnimationTime %= animation.getAnimationTimeLength();
-			
-			float frameProgression = textureAnimationTime / animation.getSecondsPerFrame();
-			
-			textureFrameProgression = frameProgression % 1;
-			
-			textureCurrentFrame = (int) (frameProgression % animation.getNumberOfFrames());
-			textureNextFrame = (textureCurrentFrame + 1) % animation.getNumberOfFrames();	
-		}
-	}
-	
 	public void controlBone(int boneIndex, Matrix4f localTransform) {
 		localControls.get(boneIndex).load(localTransform);
 	}
 	
-	public void resetAnimation() {
+	public void transitionModelAnimation(int animationIndex, int framesToTransition) {
+		ModelAnimation target = modelAnimations.get(animationIndex);
+		Map<Integer, List<Keyframe>> keyframes = calculateTransition(target, armature, framesToTransition, 1f / target.getSecondsPerFrame());
+		
+		ModelAnimation transition = new ModelAnimation("", framesToTransition, target.getSecondsPerFrame(), keyframes);
+		transition.setTransition(true);
+		transition.setOughtLoop(false);
+				
+		this.modelAnimation = transition;
+		this.modelIndex = -1;
+		
 		resetModelAnimation();
-		resetTextureAnimation();
+		
+		this.modelTransitionIndex = animationIndex;
 	}
 	
-	public void resetModelAnimation() {
-		modelAnimationTime = modelFrameProgression = modelAnimationPlayCount = 0;
+	private Map<Integer, List<Keyframe>> calculateTransition(ModelAnimation target, Bone armature, int framesToTransition, float fps) {
+		Map<Integer, List<Keyframe>> keyframes = new HashMap<>();
+		calculateTransition(keyframes, target, armature, framesToTransition, fps);
+		return keyframes;
 	}
 	
-	public void resetTextureAnimation() {
-		textureAnimationTime = textureFrameProgression = textureAnimationPlayCount = 0;
-		setTextureCurrentFrame(0);
+	private void calculateTransition(Map<Integer, List<Keyframe>> keyframes, ModelAnimation target, Bone armature, int framesToTransition, float fps) {
+		int boneIndex = armature.getIndex();
+		
+		List<Keyframe> boneFrames = new ArrayList<>();
+		Keyframe start = getTransitionStart(armature, fps);
+		Keyframe end = getTransitionEnd(target, armature, framesToTransition, fps);
+		
+		boneFrames.add(start);
+		boneFrames.add(end);
+		
+		keyframes.put(boneIndex, boneFrames);
+		
+		for(Bone child : armature.getChildren()) {
+			calculateTransition(keyframes, target, child, framesToTransition, fps);
+		}
+	}
+	
+	private Keyframe getTransitionStart(Bone bone, float fps) {
+		int boneIndex = bone.getIndex();
+		
+		Keyframe[] activeKeyframes = modelAnimation.getActiveKeyframes(boneIndex, modelTime);
+		Keyframe currentPose = activeKeyframes[0];
+		Keyframe nextPose = activeKeyframes[1];
+		
+		float proximityToCurrent = Keyframe.getProximityToNextFrame(currentPose, nextPose, modelTime, modelAnimation.getTimeLength());
+			
+		//Scale, rotate, and translate the matrix
+		Vector3f translation = VectorMath.interpolate(currentPose.getPosition(), nextPose.getPosition(), proximityToCurrent);
+		Quaternion rotation = QuaternionMath.interpolate(currentPose.getQuaternion(), nextPose.getQuaternion(), proximityToCurrent, null);
+		Vector3f scale = VectorMath.interpolate(currentPose.getScale(), nextPose.getScale(), proximityToCurrent);
+		
+		return new Keyframe(0, fps, translation, rotation, scale);
+	}
+	
+	private Keyframe getTransitionEnd(ModelAnimation target, Bone bone, int frame, float fps) {
+		Keyframe end = target.getKeyframes(bone.getIndex()).get(0);
+		return new Keyframe(frame, fps, end.getPosition(), end.getQuaternion(), end.getScale());
+	}
+	
+	public void animateTexture(float dt) {
+		if(animatingTexture) {
+			textureTime += dt;
+			if(textureTime > textureAnimation.getAnimationTimeLength()) textureLoops++;
+			textureTime %= textureAnimation.getAnimationTimeLength();
+			
+			float frameProgression = textureTime / textureAnimation.getSecondsPerFrame();			
+			textureFrame = (int) (frameProgression % textureAnimation.getNumberOfFrames());
+		}
 	}
 	
 	public boolean isAnimatingModel() {
@@ -188,23 +222,30 @@ public class Animator {
 	public void setAnimatingModel(boolean animating) {
 		this.animatingModel = animating;
 	}
-
-	public boolean isAnimatingTexture() {
-		return animatingTexture;
+	
+	public ModelAnimation getModelAnimation() {
+		return modelAnimation;
+	}
+	
+	public int getModelAnimationIndex() {
+		return modelIndex;
 	}
 
-	public void setAnimatingTexture(boolean animatingTexture) {
-		this.animatingTexture = animatingTexture;
+	public void setModelAnimation(int animationIndex) {
+		if(this.modelIndex == animationIndex) return;
+		this.modelIndex = animationIndex;
+		this.modelAnimation = this.modelAnimations.get(animationIndex);
+		resetModelAnimation();
 	}
-
+	
 	public List<ModelAnimation> getModelAnimations() {
 		return modelAnimations;
 	}
-
+	
 	public void setModelAnimations(Bone armature, List<ModelAnimation> modelAnimations) {
 		this.armature = armature;
-		this.modelAnimations = new ArrayList<>();
-			this.modelAnimations.addAll(modelAnimations);
+		this.modelAnimations.clear();
+		this.modelAnimations.addAll(modelAnimations);
 		this.animatingModel = armature != null && this.modelAnimations.size() > 0;		
 		
 		if(animatingModel) {
@@ -218,7 +259,8 @@ public class Animator {
 				}
 			}
 			
-			this.currentModelAnimation = this.modelAnimations.get(0);
+			this.modelAnimation = this.modelAnimations.get(0);
+			resetModelAnimation();
 		}
 	}
 	
@@ -245,161 +287,98 @@ public class Animator {
 	public Matrix4f getParentTransform(int boneIndex) {
 		return parentTransforms.get(boneIndex);
 	}
+	
+	public int getModelFrame() {
+		return modelFrame;
+	}
+	
+	public void setModelFrame(int modelFrame) {
+		this.modelFrame = Math.max(modelFrame, 0) % modelAnimation.getFrameCount();
+		this.modelTime = this.modelFrame * modelAnimation.getSecondsPerFrame();
+	}
+	
+	public boolean modelAnimated() {
+		return modelLoops > 0;
+	}
+	
+	public int getModelLoops() {
+		return modelLoops;
+	}
+	
+	public boolean modelIsTransitioning() {
+		return modelAnimation.isTransition();
+	}
+	
+	public boolean isAnimatingTexture() {
+		return animatingTexture;
+	}
 
+	public void setAnimatingTexture(boolean animatingTexture) {
+		this.animatingTexture = animatingTexture;
+	}
+	
+	public TextureAnimation getTextureAnimation() {
+		return textureAnimation;
+	}
+	
+	public int getTextureAnimationIndex() {
+		return textureIndex;
+	}
+	
+	public void setTextureAnimation(int animationIndex) {
+		this.textureIndex = animationIndex;
+		this.textureAnimation = textureAnimations.get(textureIndex);
+		this.textureLoops = 0;
+	}
+	
 	public List<TextureAnimation> getTextureAnimations() {
 		return textureAnimations;
 	}
 
 	public void setTextureAnimations(List<TextureAnimation> textureAnimations) {
-		this.textureAnimations = textureAnimations;
-		if(this.textureAnimations != null && this.textureAnimations.size() > 0) this.animatingTexture = true;
-	}
-	
-	public ModelAnimation getCurrentModelAnimation() {
-		return currentModelAnimation;
-	}
-	
-	public TextureAnimation getCurrentTextureAnimation() {
-		return textureAnimations.get(currentTextureAnimationIndex);
-	}
-
-	public int getCurrentModelAnimationIndex() {
-		return currentModelAnimationIndex;
-	}
-
-	public void setCurrentModelAnimation(int animationIndex) {
-		if(this.currentModelAnimationIndex == animationIndex) return;
-		this.currentModelAnimationIndex = animationIndex;
-		this.currentModelAnimation = this.modelAnimations.get(animationIndex);
-		resetModelAnimation();
-	}
-	
-	public void transitionToAnimation(int animationIndex, int framesToTransition, float fps) {				
-		ModelAnimation transition = new ModelAnimation();
-		transition.setTransition(true);
-		transition.setAnimationTimeLength(((float) framesToTransition) / fps);
-		transition.setOughtLoop(false);
+		this.textureAnimations = textureAnimations;		
+		this.animatingTexture = this.textureAnimations != null && this.textureAnimations.size() > 0;
 		
-		addTransitionKeyframes(transition, modelAnimations.get(animationIndex), armature, framesToTransition, fps);
-		
-		this.currentModelAnimation = transition;
-		this.currentModelAnimationIndex = -1;
-		
-		resetModelAnimation();
-		
-		this.transitionModelAnimationIndex = animationIndex;
-	}
-	
-	private void addTransitionKeyframes(ModelAnimation transition, ModelAnimation target, Bone armature, int framesToTransition, float fps) {
-		List<Keyframe> keyframes = new ArrayList<>();
-		int boneIndex = armature.getIndex();
-		
-		keyframes.add(getTransitionStart(armature, fps));
-		keyframes.add(getTransitionEnd(target, armature, framesToTransition, fps));
-		
-		transition.addKeyframes(boneIndex, keyframes);
-		
-		for(Bone child : armature.getChildren()) {
-			addTransitionKeyframes(transition, target, child, framesToTransition, fps);
+		if(this.animatingTexture) {
+			this.textureAnimation = this.textureAnimations.get(0);
+			resetTextureAnimation();
 		}
 	}
 	
-	private Keyframe getTransitionStart(Bone bone, float fps) {
-		int boneIndex = bone.getIndex();
-		
-		Keyframe[] activeKeyframes = currentModelAnimation.getActiveKeyframes(boneIndex, modelAnimationTime);
-		Keyframe currentPose = activeKeyframes[0];
-		Keyframe nextPose = activeKeyframes[1];
-		
-		float proximityToCurrent = Keyframe.getProximityToNextFrame(currentPose, nextPose, modelAnimationTime, currentModelAnimation.getAnimationTimeLength());
-			
-		//Scale, rotate, and translate the matrix
-		Vector3f translation = VectorMath.interpolate(currentPose.getPosition(), nextPose.getPosition(), proximityToCurrent);
-		Quaternion rotation = QuaternionMath.interpolate(currentPose.getQuaternion(), nextPose.getQuaternion(), proximityToCurrent, null);
-		Vector3f scale = VectorMath.interpolate(currentPose.getScale(), nextPose.getScale(), proximityToCurrent);
-		
-		return new Keyframe(0, fps, translation, rotation, scale);
+	public int getTextureFrame() {
+		return textureFrame;
 	}
 	
-	private Keyframe getTransitionEnd(ModelAnimation target, Bone bone, int frame, float fps) {
-		Keyframe end = target.getKeyframes(bone.getIndex()).get(0);
-		return new Keyframe(frame, fps, end.getPosition(), end.getQuaternion(), end.getScale());
+	public void setTextureFrame(int textureFrame) {
+		this.textureFrame = Math.max(textureFrame, 0) % textureAnimation.getNumberOfFrames();
+		this.textureTime = ((float) this.textureFrame) * textureAnimation.getSecondsPerFrame();
 	}
 
-	public boolean modelIsTransitioning() {
-		return currentModelAnimation.isTransition();
+	public float[] getTextureFrameBounds() {
+		return textureAnimation.getFrameBounds(textureFrame);
 	}
 	
-	public int getCurrentTextureAnimationIndex() {
-		return currentTextureAnimationIndex;
-	}
-
-	public void setCurrentTextureAnimation(int currentTextureAnimationIndex) {
-		this.currentTextureAnimationIndex = currentTextureAnimationIndex;
-		this.textureAnimationPlayCount = 0;
+	public boolean textureAnimated() {
+		return textureLoops > 0;
 	}
 	
-	//TODO: Add a setModelCurrentFrame() function
-	
-	public int getTextureCurrentFrame() {
-		return textureCurrentFrame;
-	}
-
-	public int getTextureNextFrame() {
-		return textureNextFrame;
+	public int getTextureLoops() {
+		return textureLoops;
 	}
 	
-	public void setTextureCurrentFrame(int currentFrame) {
-		this.textureCurrentFrame = currentFrame;
-		this.textureNextFrame = (currentFrame + 1) % textureAnimations.get(currentTextureAnimationIndex).getNumberOfFrames();
-	}
-
-	public Vector2f getTextureCurrentFrameOffset() {
-		return textureAnimations.get(currentTextureAnimationIndex).getFrameOffset(textureCurrentFrame);
+	public void resetAnimation() {
+		resetModelAnimation();
+		resetTextureAnimation();
 	}
 	
-	public Vector2f getTextureNextFrameOffset() {
-		return textureAnimations.get(currentTextureAnimationIndex).getFrameOffset(textureNextFrame);
+	public void resetModelAnimation() {
+		setModelFrame(0);
+		modelLoops = 0;
 	}
 	
-	public float getModelAnimationTime() {
-		return modelAnimationTime;
-	}
-
-	public void setModelAnimationTime(float modelAnimationTime) {
-		this.modelAnimationTime = modelAnimationTime;
-	}
-
-	public float getTextureAnimationTime() {
-		return textureAnimationTime;
-	}
-
-	public void setTextureAnimationTime(float textureAnimationTime) {
-		this.textureAnimationTime = textureAnimationTime;
-	}
-
-	public float getModelFrameProgression() {
-		return modelFrameProgression;
-	}
-	
-	public float getTextureFrameProgression() {
-		return textureFrameProgression;
-	}
-	
-	public boolean modelAnimationHasPlayed() {
-		return modelAnimationPlayCount > 0;
-	}
-	
-	public boolean textureAnimationHasPlayed() {
-		return textureAnimationPlayCount > 0;
-	}
-	
-	public int getModelAnimationPlayCount() {
-		return modelAnimationPlayCount;
-	}
-	
-	public int getTextureAnimationPlayCount() {
-		return textureAnimationPlayCount;
+	public void resetTextureAnimation() {
+		setTextureFrame(0);
+		textureLoops = 0;
 	}
 	
 }

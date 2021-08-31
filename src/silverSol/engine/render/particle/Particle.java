@@ -13,18 +13,16 @@ public class Particle extends Entity {
 	public Particle(Model model, Body body) {
 		super(model, body);
 				
-		this.lifetime = 1;
-		this.elapsedTime = 0;
+		this.lifetime = 1f;
+		this.elapsedTime = 0f;
 	}
 	
-	//TODO: What in the what now? Why does it work like this?
-	public void preResolution(float dt) {
+	public void update(float dt) {
 		elapsedTime += dt;
-		body3d.setShouldRemove(elapsedTime > lifetime); //TODO: Does this belong in the body class?
 	}
 	
-	public void postResolution(float dt) {
-		body3d.postResolution(dt);
+	public boolean shouldRemove() {
+		return elapsedTime > lifetime;
 	}
 
 	public float getLifetime() {

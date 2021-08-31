@@ -100,7 +100,7 @@ public abstract class Renderer<T extends Entity> {
 	
 	public void progressTime(float dt, float interpolationFactor) {
 		for(T entity : entities) {
-			if(entity.animates()) entity.getAnimator().progressAnimation(dt);
+			if(entity.animates()) entity.getAnimator().update(dt);
 		}
 	}
 	

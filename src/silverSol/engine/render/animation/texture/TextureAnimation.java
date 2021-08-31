@@ -2,15 +2,13 @@ package silverSol.engine.render.animation.texture;
 
 import java.util.List;
 
-import org.lwjgl.util.vector.Vector2f;
-
 public class TextureAnimation {
 
 	//Looping
 	private boolean oughtLoop;
 	
 	//Frames
-	private List<Vector2f> frameOffsets;
+	private List<float[]> frameBounds;
 	
 	//Frame Progression
 	private int numberOfFrames;
@@ -19,10 +17,10 @@ public class TextureAnimation {
 	private float secondsPerFrame;
 	private float animationTimeLength;
 	
-	public TextureAnimation(List<Vector2f> frameOffsets, float fps) {
+	public TextureAnimation(List<float[]> frameBounds, float fps) {
 		this.oughtLoop = false;
-		this.frameOffsets = frameOffsets;
-		this.numberOfFrames = frameOffsets.size();
+		this.frameBounds = frameBounds;
+		this.numberOfFrames = frameBounds.size();
 		this.secondsPerFrame = 1f / fps;
 		this.animationTimeLength = secondsPerFrame * numberOfFrames;
 	}
@@ -34,17 +32,9 @@ public class TextureAnimation {
 	public void setOughtLoop(boolean oughtLoop) {
 		this.oughtLoop = oughtLoop;
 	}
-
-	public List<Vector2f> getFrames() {
-		return frameOffsets;
-	}
-
-	public void setFrames(List<Vector2f> frames) {
-		this.frameOffsets = frames;
-	}
 	
-	public Vector2f getFrameOffset(int frame) {
-		return frameOffsets.get(frame);
+	public float[] getFrameBounds(int frame) {
+		return frameBounds.get(frame);
 	}
 	
 	public int getNumberOfFrames() {
