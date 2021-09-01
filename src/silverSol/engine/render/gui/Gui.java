@@ -15,11 +15,11 @@ public class Gui extends Entity {
 		
 		if(threeDimensional) {
 			this.setBody(new silverSol.engine.physics.d3.body.Body());
-			body3d.setScale(width, height, 1f);
+			body3d.setScale(width * 0.5f, height * 0.5f, 1f);
 			body3d.updateTransformation();
 		} else {
 			this.setBody(new silverSol.engine.physics.d2.body.Body());
-			body2d.setScale(width, height);
+			body2d.setScale(width * 0.5f, height * 0.5f);
 		}
 	}
 	

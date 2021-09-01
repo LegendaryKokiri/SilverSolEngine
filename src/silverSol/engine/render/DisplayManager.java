@@ -13,6 +13,7 @@ public class DisplayManager {
 	private float targetDT;
 		
 	private Vector2f screenDimensions;
+	private Vector2f pixelDimensions;
 	private boolean fullScreen;
 	
 	private ContextAttribs contextAttribs;
@@ -22,6 +23,7 @@ public class DisplayManager {
 		this.targetDT = 1f / (float) fps;
 		
 		this.screenDimensions = new Vector2f(0, 0);
+		this.pixelDimensions = new Vector2f(0, 0);
 		this.fullScreen = false;
 	}
 	
@@ -37,6 +39,7 @@ public class DisplayManager {
 			Display.setVSyncEnabled(true);
 			
 			screenDimensions = new Vector2f(screenWidth, screenHeight);
+			pixelDimensions = new Vector2f(2f / screenWidth, 2f / screenHeight);
 			GL11.glViewport(0, 0, screenWidth, screenHeight);
 			
 			updateDisplay();
@@ -76,6 +79,10 @@ public class DisplayManager {
 	
 	public Vector2f getDimensions() {
 		return screenDimensions;
+	}
+	
+	public Vector2f getPixelDimensions() {
+		return pixelDimensions;
 	}
 	
 	public static void closeDisplay() {
