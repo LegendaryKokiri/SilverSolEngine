@@ -247,24 +247,17 @@ public class MatrixMath {
 	/**
 	 * Creates a 4-by-4 transformation matrix from the given transformations
 	 * @param translation The translation of the entity
-	 * @param rotation The magnitude of the Euler rotations along each axis (in degrees)
+	 * @param rotation The magnitude of the Euler rotations along each axis (in radians)
 	 * @return The 4-by-4 transformation matrix constructed from the given transformations
 	 */
 	public static Matrix4f createTransformation(Vector3f translation, Vector3f rotation) {
-		Matrix4f matrix = new Matrix4f();
-		
-		Matrix4f.rotate(rotation.z, new Vector3f(0, 0, 1), matrix, matrix);
-		Matrix4f.rotate(rotation.y, new Vector3f(0, 1, 0), matrix, matrix);
-		Matrix4f.rotate(rotation.x, new Vector3f(1, 0, 0), matrix, matrix);
-		Matrix4f.translate(translation, matrix, matrix);
-		
-		return matrix;
+		return createTransformation(translation, rotation, new Vector3f(1f, 1f, 1f));
 	}
 	
 	/**
 	 * Creates a 4-by-4 transformation matrix from the given transformations
 	 * @param translation The translation of the entity
-	 * @param rotation The magnitude of the Euler rotations along each axis (in degrees)
+	 * @param rotation The magnitude of the Euler rotations along each axis (in radians)
 	 * @param scale The scale of the entity
 	 * @return The 4-by-4 transformation matrix constructed from the given transformations
 	 */
@@ -283,16 +276,11 @@ public class MatrixMath {
 	/**
 	 * Creates a 4-by-4 transformation matrix from the given transformations
 	 * @param translation The translation of the entity
-	 * @param scale The scale of the entity
+	 * @param rotation The rotation of the entity
 	 * @return The 4-by-4 transformation matrix constructed from the given transformations
 	 */
 	public static Matrix4f createTransformation(Vector3f translation, Quaternion rotation) {
-		Matrix4f matrix = new Matrix4f();
-		
-		Matrix4f.translate(translation, matrix, matrix);
-		Matrix4f.mul(QuaternionMath.getMatrix4f(rotation), matrix, matrix);
-		
-		return matrix;
+		return createTransformation(translation, rotation, new Vector3f(1f, 1f, 1f));
 	}
 	
 	/**
@@ -303,16 +291,7 @@ public class MatrixMath {
 	 * @return The 4-by-4 transformation matrix constructed from the given transformations
 	 */
 	public static Matrix4f createTransformation(Vector3f translation, Quaternion rotation, Vector3f scale) {
-		Matrix4f matrix = new Matrix4f();
-		Vector3f euler = QuaternionMath.getEuler(rotation);
-		
-		Matrix4f.translate(translation, matrix, matrix);
-		Matrix4f.rotate(euler.z, new Vector3f(0, 0, 1), matrix, matrix);
-		Matrix4f.rotate(euler.y, new Vector3f(0, 1, 0), matrix, matrix);
-		Matrix4f.rotate(euler.x, new Vector3f(1, 0, 0), matrix, matrix);
-		Matrix4f.scale(scale, matrix, matrix);
-		
-		return matrix;
+		return createTransformation(translation, QuaternionMath.getEuler(rotation), scale);
 	}
 	
 	/**
@@ -350,7 +329,7 @@ public class MatrixMath {
 	/**
 	 * Creates a 4-by-4 transformation-view matrix from the given transformations, constrained to face the camera
 	 * @param translation The translation of the entity
-	 * @param rotation The magnitude of the entity's rotation (in degrees)
+	 * @param rotation The magnitude of the entity's rotation (in radians)
 	 * @param scale The scale of the entity
 	 * @return The 4-by-4 transformation matrix constructed from the given transformations
 	 */
@@ -439,12 +418,10 @@ public class MatrixMath {
 	}
 	
 	public static void main(String[] args) {
-		Quaternion q = QuaternionMath.create(0f, 1.57f, 0f);
-		System.out.println(createTransformation(new Vector3f(10f, 5f, 3f), q, new Vector3f(1f, 1f, 1f)));
+		Matrix4f result = new Matrix4f();
+		System.out.println(Matrix4f.rotate((float) Math.PI * 0.33f, new Vector3f(0f, 1f, 0f), result, result));
 		System.out.println();
-		System.out.println(createTransformation(new Vector3f(10f, 5f, 3f), QuaternionMath.getEuler(q),
-				new Vector3f(1f, 1f, 1f)));
-		System.out.println(getLeft(createTransformation(new Vector3f(10f, 5f, 3f), q, new Vector3f(1f, 1f, 1f))));
+		System.out.println(Matrix4f.rotate((float) Math.PI * 0.33f, new Vector3f(1f, 0f, 0f), result, result));
 	}
 	
 }

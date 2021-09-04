@@ -247,6 +247,7 @@ public class Body {
 
 	public void setRotation(Quaternion rotation) {
 		this.rotation.set(rotation.x, rotation.y, rotation.z, rotation.w);
+		updateTransformation();
 
 		for(Volume volume : volumes) {
 			volume.updateTransformation();
@@ -529,11 +530,23 @@ public class Body {
 	
 	public static void main(String[] args) {
 		Body body = new Body();
-		body.setPosition(7f, 11f, 15f);
-		body.updateTransformation();
+		Vector3f xAxis = new Vector3f(1f, 0f, 0f);
+		Vector3f yAxis = new Vector3f(0f, 1f, 0f);
+		Vector3f zAxis = new Vector3f(0f, 0f, 1f);
 		
-		System.out.println(body.toGlobalPosition(new Vector3f(0f, 1f, 0f)));
-		System.out.println(body.toLocalPosition(new Vector3f(6f, 9f, 12f)));
-		System.out.println(body.toGlobalPosition(new Vector3f(0f, 1f, 0f)));
+		System.out.println("---Body---");
+		body.setPosition(0f, 0f, 0f);
+		body.setRotation(new Vector3f((float) Math.PI * 0.5f, 0, 0));
+		System.out.println(body.toLocalDirection(xAxis));
+		System.out.println(body.toLocalDirection(yAxis));
+		System.out.println(body.toLocalDirection(zAxis));
+		
+		System.out.println("---Sphere---");
+		Sphere sphere = new Sphere(1f, Type.SOLID, null);
+		sphere.setBodyOffset(MatrixMath.createTransformation(new Vector3f(), new Vector3f((float) Math.PI * 0.5f, 0, 0)));
+		body.addVolume(sphere);
+		System.out.println(sphere.toLocalDirection(xAxis));
+		System.out.println(sphere.toLocalDirection(yAxis));
+		System.out.println(sphere.toLocalDirection(zAxis));
 	}
 }

@@ -4,9 +4,11 @@ import org.lwjgl.util.vector.Matrix3f;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Quaternion;
 import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.util.vector.Vector4f;
 
 public class QuaternionMath {
 	
+	private static final float EPSILON = 1e-3f;
 	private static final float HALF_PI = 0.5f * (float) Math.PI;
 	
 	public static Quaternion create(float eulerX, float eulerY, float eulerZ) {
@@ -17,10 +19,10 @@ public class QuaternionMath {
 		float cosZ = (float) Math.cos(eulerZ * 0.5f);
 		float sinZ = (float) Math.sin(eulerZ * 0.5f);
 		
-		float w = cosX * cosY * cosZ - sinX * sinY * sinZ;
-		float x = sinX * cosY * cosZ + cosX * sinY * sinZ;
-		float y = cosX * sinY * cosZ - sinX * cosY * sinZ;
-		float z = cosX * cosY * sinZ + sinX * sinY * cosZ;
+		float w = cosX * cosY * cosZ + sinX * sinY * sinZ;
+		float x = sinX * cosY * cosZ - cosX * sinY * sinZ;
+		float y = cosX * sinY * cosZ + sinX * cosY * sinZ;
+		float z = cosX * cosY * sinZ - sinX * sinY * cosZ;
 		
 		return new Quaternion(x, y, z, w);
 	}
@@ -97,6 +99,27 @@ public class QuaternionMath {
 		matrix.m33 = 1f;
 		
 		return matrix;
+	}
+	
+	/**
+	 * Computes the quaternion representing the rotation between two vectors
+	 * @param u The starting vector
+	 * @param v The ending vector
+	 * @return The quaternion representing the rotation from u to v
+	 */
+	public static Quaternion rotationBetween(Vector3f u, Vector3f v) {
+		Vector3f nu = u.normalise(null);
+		Vector3f nv = v.normalise(null);
+		Vector3f sum = Vector3f.add(nu, nv, null);
+		
+		if(sum.lengthSquared() < EPSILON) {
+			Vector3f ortho = VectorMath.generateOrthogonal(nu, null);
+			return new Quaternion(ortho.x, ortho.y, ortho.z, 0f);
+		}
+		
+		Vector3f half = sum.normalise(null);
+		Vector3f cross = Vector3f.cross(half, nu, null);
+		return new Quaternion(cross.x, cross.y, cross.z, Vector3f.dot(nu, half));
 	}
 	
 	/**
@@ -179,6 +202,16 @@ public class QuaternionMath {
 		System.out.println(getEuler(create(rotation)));
 		System.out.println();
 		System.out.println(MatrixMath.createRotation(rotation));
+		System.out.println();
+		
+//		Quaternion q = rotationBetween(new Vector3f(1f, 0f, 0f), new Vector3f(0.707f, 0.707f, 0f));
+		Quaternion q = rotationBetween(new Vector3f(1f, 0f, 0f), new Vector3f(-0.707f, 0.707f, 0f));
+		
+		Matrix4f m = MatrixMath.createTransformation(new Vector3f(), q);
+		Vector4f v = VectorMath.mulMatrix(m, new Vector4f(1f, 0f, 0f, 0f), null);
+		System.out.println(v);
+		Matrix4f.transform(m, new Vector4f(1f, 0f, 0f, 0f), v);
+		System.out.println(v);
 	}
 	
 }

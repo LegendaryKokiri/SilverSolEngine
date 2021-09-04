@@ -56,7 +56,6 @@ public class AABB extends Volume {
 	
 	@Override
 	public Vector3f[] raycast(Vector3f globalOrigin, Vector3f globalDirection, float maxLength, boolean global) {
-		Vector3f origin = toLocalPosition(globalOrigin);
 		//TODO: AABB Raycast
 		return new Vector3f[]{new Vector3f(), new Vector3f()};
 	}

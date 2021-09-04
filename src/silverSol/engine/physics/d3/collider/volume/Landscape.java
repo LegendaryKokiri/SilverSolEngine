@@ -1,10 +1,8 @@
 package silverSol.engine.physics.d3.collider.volume;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
-import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector2f;
 import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
@@ -21,26 +19,14 @@ import silverSol.math.NumberMath;
 import silverSol.math.VectorMath;
 
 public class Landscape extends Volume {
-	
-	private static final float EPSILON = 1E-3f;
-	
+		
 	private float width, depth, height;
 	private float halfWidth, halfDepth, halfHeight;
 	private float gridSizeX, gridSizeZ;
 	private int xPoints, zPoints;
 	
 	private float heights[][];
-	
-	private static class DepthComparator implements Comparator<Collision> {
-		@Override
-		public int compare(Collision c1, Collision c2) {
-			float diff = c1.getPenetrationDepth() - c2.getPenetrationDepth();
-			if(diff < 0f) return -1;
-			if(diff > 0f) return 1;
-			return 0;
-		}
-	}
-	private static DepthComparator depthComparator = new DepthComparator();
+	private Planar planars[][][];
 	
 	public Landscape(float width, float height, float depth, float[][] heights, Type collisionType, Object colliderData) {
 		super(collisionType, colliderData);
@@ -52,10 +38,11 @@ public class Landscape extends Volume {
 		this.halfDepth = depth * 0.5f;
 		this.halfHeight = height * 0.5f;
 		
-		this.heights = heights;
-		
 		this.xPoints = heights.length;
 		this.zPoints = heights[0].length;
+		
+		this.heights = heights;
+		this.planars = new Planar[xPoints][zPoints][2];
 		
 		if(xPoints < 2 || zPoints < 2) {
 			System.err.println("Landscapes must have at least four heights defined (two in the x and two in the z).");
@@ -66,18 +53,13 @@ public class Landscape extends Volume {
 		this.gridSizeZ = depth / (float)(zPoints - 1);
 	}
 	
-	public Collider clone() {
-		float[][] cloneHeights = new float[heights.length][heights[0].length];
-		for(int x = 0; x < heights.length; x++) {
-			for(int z = 0; z < heights[0].length; z++) {
-				cloneHeights[x][z] = heights[x][z];
-			}
-		}
-		
-		return new Landscape(width, height, depth, cloneHeights, type, colliderData);
+	private Planar getPlanar(int gridX, int gridZ, boolean upperLeft) {
+		int upperLeftIndex = upperLeft ? 1 : 0;
+		if(planars[gridX][gridZ][upperLeftIndex] == null) generatePlanar(gridX, gridZ, upperLeft);
+		return planars[gridX][gridZ][upperLeftIndex];
 	}
 	
-	private Planar generatePlanar(int gridX, int gridZ, boolean upperLeft) {
+	private void generatePlanar(int gridX, int gridZ, boolean upperLeft) {
 		Vector3f[] t = new Vector3f[3];
 		
 		float leftX = (float) gridX * gridSizeX - halfWidth;
@@ -99,7 +81,18 @@ public class Landscape extends Volume {
 		planar.setBodyOffset(this.bodyOffset);
 		planar.setBody(this.body);
 		planar.setID(this.ID);
-		return planar;
+		planars[gridX][gridZ][upperLeft ? 1 : 0] = planar;
+	}
+	
+	public Collider clone() {
+		float[][] cloneHeights = new float[heights.length][heights[0].length];
+		for(int x = 0; x < heights.length; x++) {
+			for(int z = 0; z < heights[0].length; z++) {
+				cloneHeights[x][z] = heights[x][z];
+			}
+		}
+		
+		return new Landscape(width, height, depth, cloneHeights, type, colliderData);
 	}
 	
 	@Override
@@ -147,11 +140,11 @@ public class Landscape extends Volume {
 			boolean validSquare = validGridX(gridX) && validGridZ(gridZ);
 			
 			if(validSquare) {
-				Planar p = generatePlanar(gridX, gridZ, true);
+				Planar p = getPlanar(gridX, gridZ, true);
 				intersection = p.raycast(globalOrigin, globalDirection, maxLength, global); //TODO: Did we really construct the planars such that origin and direction would be considered local?
 				if(intersection != null) return intersection;
 				
-				p = generatePlanar(gridX, gridZ, false);
+				p = getPlanar(gridX, gridZ, false);
 				intersection = p.raycast(globalOrigin, globalDirection, maxLength, global); //TODO: Did we really construct the planars such that origin and direction would be considered local?
 				if(intersection != null) return intersection;
 			}
@@ -303,7 +296,7 @@ public class Landscape extends Volume {
 			if(z >= zPoints - 1) break;
 			for(int x = NumberMath.max(0, startX); x <= endX; x++) {
 				if(x >= (xPoints - 1) * 2) break;
-				planars.add(generatePlanar(x / 2, z, x % 2 == 0));
+				planars.add(getPlanar(x / 2, z, x % 2 == 0));
 			}
 		}
 		

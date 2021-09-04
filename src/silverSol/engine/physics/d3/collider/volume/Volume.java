@@ -179,9 +179,9 @@ public abstract class Volume extends Collider {
 	public abstract SepEdge[] getSeparatingEdges(Planar planar);
 	
 	public void updateTransformation() {
-		transformation.load(Matrix4f.mul(body.getTransformation(), bodyOffset, null));
+		this.transformation.load(Matrix4f.mul(body.getTransformation(), bodyOffset, null));
 		this.position.set(MatrixMath.getTranslation(transformation));
-		Quaternion.setFromMatrix(transformation, this.rotation);
+		Quaternion.setFromMatrix(this.transformation, this.rotation);
 		calculateEndpoints();
 	}
 	

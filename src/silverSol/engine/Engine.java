@@ -9,6 +9,7 @@ import org.lwjgl.opengl.Display;
 import org.xml.sax.SAXException;
 
 import silverSol.engine.audio.MasterAudioPlayer;
+import silverSol.engine.input.Input;
 import silverSol.engine.physics.d3.PhysicsEngine3d;
 import silverSol.engine.render.RenderEngine;
 import silverSol.engine.settings.PhysicsSettings;
@@ -70,6 +71,7 @@ public class Engine {
 			
 			int iterationCount = 0;
 			while(timer.isTimeAccumulated() && iterationCount < timer.getMaxIterations()) {
+				Input.poll();
 				activeGameState.updatePrePhysics();
 				physicsEngine3d.update();
 				activeGameState.updatePostPhysics();

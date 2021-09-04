@@ -9,6 +9,10 @@ import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
 
 public class VectorMath {
+	
+	private static final Vector3f X_AXIS = new Vector3f(1f, 0f, 0f);
+	private static final Vector3f Y_AXIS = new Vector3f(0f, 1f, 0f);
+	private static final Vector3f Z_AXIS = new Vector3f(0f, 0f, 1f);
 		
 	public static boolean getEqual(Vector2f v1, Vector2f v2) {
 		return v1.x == v2.x && v1.y == v2.y;
@@ -452,6 +456,22 @@ public class VectorMath {
 	}
 	
 	/**
+	 * Generates a vector that is orthogonal to v.
+	 * @param v Vector3f
+	 * @return A vector that is orthogonal to v. The returned vector's length will equal the length of v.
+	 */
+	public static Vector3f generateOrthogonal(Vector3f v, Vector3f dest) {
+		float x = Math.abs(v.x);
+		float y = Math.abs(v.y);
+		float z = Math.abs(v.z);
+		Vector3f other = x < y ? (x < z ? X_AXIS : Z_AXIS) : (y < z ? Y_AXIS : Z_AXIS);
+		
+		Vector3f ortho = Vector3f.cross(v, other, null);
+		if(dest != null) dest.set(ortho);
+		return ortho;
+	}
+	
+	/**
 	 * Generates two additional vectors that form an orthogonal basis when joined with v.
 	 * @param v Normalized Vector3f
 	 * @return An array of two vectors that form an orthogonal basis together with v
@@ -479,10 +499,6 @@ public class VectorMath {
 	}
 	
 	public static void main(String[] args) {
-		Vector4f v = new Vector4f(0, 1, 2, 3);
-		System.out.println(v.w);
-		System.out.println(v.x);
-		System.out.println(v.y);
-		System.out.println(v.z);
+		 
 	}
 }
