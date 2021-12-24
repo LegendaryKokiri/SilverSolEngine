@@ -79,7 +79,9 @@ public class BroadPhase {
 				Collider c1 = loadedColliders.get(i);
 				Collider c2 = loadedColliders.get(j);
 				if(!c1.canCollideWith(c2) || !c2.canCollideWith(c1)) continue;
-				if(overlap(overlapTracker, i, j)) pairs.add(new Collider[]{loadedColliders.get(i), loadedColliders.get(j)});
+				if(overlap(overlapTracker, i, j)) {
+					pairs.add(new Collider[]{c1, c2});
+				}
 			}
 		}
 	}

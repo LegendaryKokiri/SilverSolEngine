@@ -1,6 +1,7 @@
 package silverSol.engine.physics.d3;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.lwjgl.util.vector.Vector3f;
@@ -52,7 +53,7 @@ public class PhysicsEngine3d {
 				
 		unitsPerMeter = 1f;
 		
-		defaultGravity = new Vector3f(0f, 9.8f, 0f);
+		defaultGravity = new Vector3f(0f, -9.8f, 0f);
 		
 		bodies = new ArrayList<>();
 		colliders = new ArrayList<>();
@@ -80,7 +81,7 @@ public class PhysicsEngine3d {
 		}
 	}
 	
-	public void addEntities(List<? extends Entity> entities) {
+	public void addEntities(Collection<? extends Entity> entities) {
 		for(Entity entity : entities) {
 			addEntity(entity);
 		}
@@ -103,9 +104,23 @@ public class PhysicsEngine3d {
 		}
 	}
 	
+	
+	
 	public void removeEntity(Entity entity) {
 		if(entity.hasBody3d()) {
 			removeBody(entity.getBody3d());
+		}
+	}
+	
+	public void removeEntities(Entity... entities) {
+		for(Entity entity : entities) {
+			removeEntity(entity);
+		}
+	}
+	
+	public void removeEntities(Collection<? extends Entity> entities) {
+		for(Entity entity : entities) {
+			removeEntity(entity);
 		}
 	}
 	

@@ -170,11 +170,7 @@ public class ModelParser {
 			}
 		}
 		
-		Vao vao = new Vao(0);
-		
-		if(hasIndices) vao.setVertexCount(indices.length);
-		else vao.setVertexCount(vertices.length / 3);
-		
+		Vao vao = new Vao(hasIndices ? indices.length : vertices.length / 3);
 		vao.bind();
 		
 		if(hasIndices) addIndicesTo(vao, indices);

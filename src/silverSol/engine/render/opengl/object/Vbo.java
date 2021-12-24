@@ -61,9 +61,13 @@ public class Vbo {
 	}
 	
 	public void overwriteAttribute(float[] data) {
+		overwriteAttribute(data, 0);
+	}
+	
+	public void overwriteAttribute(float[] data, long offset) {
 		bind();
 		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, OpenGLMath.getFloatByteSize(data.length), drawType);
-		GL15.glBufferSubData(GL15.GL_ARRAY_BUFFER, 0, Buffer.storeDataInBuffer(data));
+		GL15.glBufferSubData(GL15.GL_ARRAY_BUFFER, offset, Buffer.storeDataInBuffer(data));
 		unbind();
 	}
 	

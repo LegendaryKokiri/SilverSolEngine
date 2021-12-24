@@ -16,8 +16,8 @@ import silverSol.parsers.model.ModelParser;
 
 public class TerrainParser {
 
-	private static final float MAX_PIXEL_COLOR = 256 * 256 * 256;
-	private static final float PIXEL_COLOR_MODIFIER = MAX_PIXEL_COLOR / 2f;
+	private static final int NO_ALPHA = (0xFF << 16) + (0xFF << 8) + 0xFF;
+	private static final float MAX_PIXEL_COLOR = (float) NO_ALPHA;
 	
 	public static HeightMapTerrain parseHeightMapTerrain(String heightMapPath, float maxHeight) {
 		InputStream in = TerrainParser.class.getResourceAsStream(heightMapPath);
@@ -97,7 +97,9 @@ public class TerrainParser {
 		}
 		
 		//TODO: Why on earth is maxHeight multiplied by 2? What was I trying to accomplish? Does it actually yield a terrain that ranges from heights 0 to maxHeight?
-		terrain = new HeightMapTerrain(width, maxHeight * 2, length, heights);
+		//Since I'm deleting this on December 21, 2021, note that the original line was: terrain = new HeightMapTerrain(width, maxHeight * 2, length, heights);
+		//I presume that the original rationale was to size the AABB properly for broadphase detection and resolution, stretching it both up AND down rather than changing its offset
+		terrain = new HeightMapTerrain(heights);
 		terrain.setModel(ModelParser.create3dModel(indices.length, null, vertices, textureCoords, normals, indices));
 		
 		return terrain;
@@ -105,12 +107,7 @@ public class TerrainParser {
 	
 	private static float getHeight(int x, int y, float maxHeight, BufferedImage image) {
 		if(x < 0 || x >= image.getHeight() || y < 0 || y >= image.getHeight()) return 0;
-		
-		float height = image.getRGB(x, y);
-		height += PIXEL_COLOR_MODIFIER;
-		height /= PIXEL_COLOR_MODIFIER;
-		height *= maxHeight;
-		return height;
+		return (image.getRGB(x, y) & NO_ALPHA) / MAX_PIXEL_COLOR * maxHeight;
 	}
 	
 	private static Vector3f calculateNormal(int x, int y, float maxHeight, BufferedImage image) {
@@ -120,6 +117,31 @@ public class TerrainParser {
 		float heightU = getHeight(x, y + 1, maxHeight, image);
 		Vector3f normal = new Vector3f(heightL - heightR, 2f, heightD - heightU).normalise(null);
 		return normal;
+	}
+	
+	public static void main(String[] args) {
+		InputStream in = TerrainParser.class.getResourceAsStream("/textures/Pixel Test.png");
+		BufferedImage image = null;
+		try {
+			image = ImageIO.read(in);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		int black = image.getRGB(0, 0);
+		int white = image.getRGB(1, 0);
+		
+		int r = 255;
+		int g = 255;
+		int b = 255;
+		int a = 255;
+		float height = ((a << 24) + (b << 16) + (g << 8) + r) & NO_ALPHA;
+		
+		System.out.println("Black = " + black + " = " + Integer.toBinaryString(black));
+		System.out.println("White = " + white + " = " + Integer.toBinaryString(white));
+		
+		height /= MAX_PIXEL_COLOR;
+		System.out.println("Divided = " + height + " = " + height);
 	}
 	
 }

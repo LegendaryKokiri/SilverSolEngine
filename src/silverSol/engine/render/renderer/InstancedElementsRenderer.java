@@ -1,5 +1,6 @@
 package silverSol.engine.render.renderer;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -87,6 +88,17 @@ public class InstancedElementsRenderer<T extends Entity> extends InstancedRender
 	public void removeEntity(T entity) {
 		entities.remove(entity);
 		modelInstances.get(entity.getModel()).remove(entity);
+	}
+	
+	@Override
+	@SuppressWarnings("unchecked")
+	public void removeEntities(T... entities) {
+		for(T entity : entities) removeEntity(entity);
+	}
+	
+	@Override
+	public void removeEntities(Collection<T> entities) {
+		for(T entity : entities) removeEntity(entity);
 	}
 	
 	public int getIndexOffset() {

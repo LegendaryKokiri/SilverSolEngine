@@ -20,8 +20,8 @@ import silverSol.math.VectorMath;
 
 public class Landscape extends Volume {
 		
-	private float width, depth, height;
-	private float halfWidth, halfDepth, halfHeight;
+	private float width, height, depth;
+	private float halfWidth, halfDepth;
 	private float gridSizeX, gridSizeZ;
 	private int xPoints, zPoints;
 	
@@ -36,7 +36,6 @@ public class Landscape extends Volume {
 		this.height = height;
 		this.halfWidth = width * 0.5f;
 		this.halfDepth = depth * 0.5f;
-		this.halfHeight = height * 0.5f;
 		
 		this.xPoints = heights.length;
 		this.zPoints = heights[0].length;
@@ -100,8 +99,8 @@ public class Landscape extends Volume {
 		//TODO: This fails for a rotated terrain (same with Topography)
 		endpoints[0].value = position.x - halfWidth;
 		endpoints[1].value = position.x + halfWidth;
-		endpoints[2].value = position.y - halfHeight;
-		endpoints[3].value = position.y + halfHeight;
+		endpoints[2].value = position.y; //Since the Landscape is not centered, but rather based at zero and then stretched upwards, we use full height instead of half height
+		endpoints[3].value = position.y + height; //Since the Landscape is not centered, but rather based at zero and then stretched upwards, we use full height instead of half height
 		endpoints[4].value = position.z - halfDepth;
 		endpoints[5].value = position.z + halfDepth;
 	}
@@ -416,7 +415,6 @@ public class Landscape extends Volume {
 		}
 		
 		this.height = height;
-		this.halfHeight = height * 0.5f;
 	}
 
 	public float[][] getHeights() {
@@ -424,7 +422,6 @@ public class Landscape extends Volume {
 	}
 	
 	public static void main(String[] args) {
-		//TODO: Modify the landscape such that the height indices correspond to what you visually see when making such a 2-D array as heights
 		Landscape landscape = new Landscape(10f, 40f, 10f, new float[][]{
 			{0f,0f,0f,0f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,40f,40f,40f,0f},{0f,0f,0f,0f,0f}}, Type.SOLID, null);
 		landscape.setID(2);

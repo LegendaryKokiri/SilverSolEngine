@@ -81,6 +81,8 @@ public class AreaParser {
 		terrain.getModel().addTexture(new Texture(green));
 		terrain.getModel().addTexture(new Texture(blue));
 		
+		terrain.setBody(new Body());
+		
 		XmlNode transformation = terrainInstance.getChild("Transformation");
 		parseTransformation(terrain.getBody3d(), transformation);
 		

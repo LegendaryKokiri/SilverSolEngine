@@ -1,6 +1,7 @@
 package silverSol.engine.render.renderer;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.lwjgl.opengl.GL11;
@@ -141,6 +142,9 @@ public abstract class Renderer<T extends Entity> {
 	
 	public abstract void removeEntity(int index);
 	public abstract void removeEntity(T entity);
+	@SuppressWarnings("unchecked")
+	public abstract void removeEntities(T... entities);
+	public abstract void removeEntities(Collection<T> entities);
 	
 	public void clearEntities() {
 		entities.clear();

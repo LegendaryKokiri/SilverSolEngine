@@ -398,6 +398,11 @@ public class Body {
 		return gravity;
 	}
 	
+	public void setGravity(float x, float y, float z) {
+		this.gravitySet = true;
+		this.gravity.set(x, y, z);
+	}
+	
 	public void setGravity(Vector3f gravity) {
 		this.gravitySet = true;
 		this.gravity.set(gravity);
@@ -418,6 +423,7 @@ public class Body {
 	public void addVolume(Volume volume) {
 		if(volume != null) {
 			volume.setBody(this);
+			
 			volumes.add(volume);
 			if(volume.getType() == Type.SOLID) {
 				adjustMomentOfInertia();
@@ -440,6 +446,12 @@ public class Body {
 		return collider.getBody() == this;
 	}
 	
+	/**
+	 * Sets the bit masks of all of this Body's Colliders to the given bit masks.
+	 * IMPORTANT: Colliders added to the Body after this function is called will not have their bit masks set.
+	 * @param identityBitMask The identity bit mask to apply to this Body's Colliders
+	 * @param collisionBitMask The collision bit mask to apply to this Body's Colliders
+	 */
 	public void setMasks(int identityBitMask, int collisionBitMask) {
 		for(Volume volume : volumes) {
 			volume.setIdentityBitMask(identityBitMask);

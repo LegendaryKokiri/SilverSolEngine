@@ -67,7 +67,7 @@ public class Engine {
 				continue;
 			}
 			
-			masterAudioPlayer.update(activeGameState.getPlayingSounds());
+//			masterAudioPlayer.update(activeGameState.getPlayingSounds());
 			
 			int iterationCount = 0;
 			while(timer.isTimeAccumulated() && iterationCount < timer.getMaxIterations()) {

@@ -1,5 +1,7 @@
 package silverSol.engine.render.renderer;
 
+import java.util.Collection;
+
 import org.lwjgl.opengl.GL11;
 
 import silverSol.engine.entity.Entity;
@@ -64,6 +66,17 @@ public class ElementsRenderer<T extends Entity> extends Renderer<T> {
 	@Override
 	public void removeEntity(T entity) {
 		entities.remove(entity);
+	}
+	
+	@Override
+	@SuppressWarnings("unchecked")
+	public void removeEntities(T... entities) {
+		for(T entity : entities) this.entities.remove(entity);
+	}
+
+	@Override
+	public void removeEntities(Collection<T> entities) {
+		this.entities.removeAll(entities);
 	}
 
 	public int getIndexOffset() {

@@ -14,15 +14,12 @@ public class Vao {
 		
 	private int vaoID;
 	private List<Vbo> vbos;
+	private int renderedVertexCount;
 	
-	private int vertexCount;
-		private int renderedVertexCount;
-	
-	public Vao(int vertexCount) {
+	public Vao(int renderedVertexCount) {
 		this.vaoID = GL30.glGenVertexArrays();
 		this.vbos = new ArrayList<>();
-		this.vertexCount = vertexCount;
-		this.renderedVertexCount = vertexCount;
+		this.renderedVertexCount = renderedVertexCount;
 	}
 	
 	public int getVaoID() {
@@ -91,15 +88,6 @@ public class Vao {
 	
 	public void addIndexVbo(Vbo vbo) {
 		this.vbos.add(vbo);
-	}
-	
-	public int getVertexCount() {
-		return vertexCount;
-	}
-
-	public void setVertexCount(int vertexCount) {
-		this.vertexCount = vertexCount;
-		setRenderedVertexCount(vertexCount);
 	}
 	
 	public int getRenderedVertexCount() {
