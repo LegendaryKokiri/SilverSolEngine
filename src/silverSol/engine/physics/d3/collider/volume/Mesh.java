@@ -1,9 +1,7 @@
 package silverSol.engine.physics.d3.collider.volume;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,9 +14,7 @@ import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
 import silverSol.math.geometry.Triangle;
 
 public class Mesh extends Volume {
-	
-	private static final float EPSILON = 1e-3f;
-	
+		
 	private Set<Hull> constituents;
 	
 	public Mesh(Type collisionType, Object colliderData) {
@@ -42,7 +38,7 @@ public class Mesh extends Volume {
 		
 		while(faces.size() > 0) {
 			// Decompose mesh and separate hull
-			Set<Triangle> hull = buildHull(faces);
+			Set<Triangle> hull = buildHull(faces, adjacencies);
 			
 			// Build constituent hull from triangle set
 			int[] hullIndices = new int[hull.size() * 3];
@@ -56,6 +52,7 @@ public class Mesh extends Volume {
 			}
 			
 			Hull constituent = new Hull(vertices, hullIndices, this.type, null);
+			constituent.setID(this.ID);
 			this.constituents.add(constituent);
 		}
 		
@@ -83,7 +80,7 @@ public class Mesh extends Volume {
 			// Populate collections
 			faceArray[i / 3] = face;
 			faces.add(face);
-			faceIndices.put(face, i / 3);
+			faceIndices.put(face, i);
 			adjacencies.put(face, new HashSet<>());
 			
 			// Key face in lookup table by reversed edge indices
@@ -113,17 +110,49 @@ public class Mesh extends Volume {
 		}
 	}
 	
-	private Set<Triangle> buildHull(Set<Triangle> meshFaces) {
+	private Set<Triangle> buildHull(Set<Triangle> meshFaces, Map<Triangle, Set<Triangle>> adjacencies) {
 		Set<Triangle> hull = new HashSet<>();
+		Set<Triangle> candidates = new HashSet<>(); // Triangles that may belong in the hull
+		Set<Triangle> considered = new HashSet<>(); // Triangles that have already been evaluated to be added to the hull
+		
+		// Pop an item out of the mesh set and add it to candidates
+		Triangle starter = null;
+		for(Triangle meshFace : meshFaces) {
+			starter = meshFace;
+			break;
+		}
+		
+		if(starter == null) throw new IllegalArgumentException("Cannot build a hull from zero mesh faces.");
+		meshFaces.remove(starter);
+		candidates.add(starter);
 		
 		// Construct a convex hull from a subset of the mesh faces
 		hullLoop:
-		for(Triangle meshFace : meshFaces) {
-			for(Triangle hullFace : hull) {
-				if(!convexTriangles(hullFace, meshFace)) continue hullLoop;
+		while(candidates.size() > 0) {
+			// Select an arbitrary face from candidate set
+			Triangle candidate = null;
+			for(Triangle nextCandidate : candidates) {
+				candidate = nextCandidate;
+				break;
 			}
 			
-			hull.add(meshFace);
+			// Pop selected face from the set and mark it as considered
+			candidates.remove(candidate);
+			considered.add(candidate);
+			
+			// Check the candidate for convexity with the hull
+			for(Triangle hullFace : hull) {
+				if(!convexTriangles(hullFace, candidate)) continue hullLoop;
+			}
+			
+			// If all convexity tests are passed, add the candidate to the hull
+			hull.add(candidate);
+			
+			// Mark all unconsidered adjacent faces to new hull faceas candidates
+			for(Triangle adjacency : adjacencies.get(candidate)) {
+				if(considered.contains(adjacency)) continue;
+				candidates.add(adjacency);
+			}
 		}
 		
 		// Decompose mesh by removing hull faces from mesh
@@ -196,11 +225,14 @@ public class Mesh extends Volume {
 		
 	}
 	
+	@SuppressWarnings("unused")
 	public static void main(String[] args) {
-		Vector3f[] vertices = new Vector3f[]{new Vector3f(0f, 0f, 0f), new Vector3f(1f, 0f, 0f), new Vector3f(0f, 0f, 1f), new Vector3f(1f, 0f, 1f), new Vector3f(0.5f, 1f, 0.5f),
+		Vector3f[] vertices = new Vector3f[]{
+				new Vector3f(0f, 0f, 0f), new Vector3f(1f, 0f, 0f), new Vector3f(0f, 0f, 1f), new Vector3f(1f, 0f, 1f), new Vector3f(0.5f, 1f, 0.5f),
 				new Vector3f(2f, 0f, 0f), new Vector3f(2f, 0f, 2f), new Vector3f(1.5f, 1f, 1.5f)};
-		int[] indices = new int[] {4, 0, 2, 4, 1, 0, 4, 3, 1, 4, 2, 3,
-				7, 2, 3, 7, 5, 2, 7, 6, 5, 7, 3, 6};
+		int[] indices = new int[] {
+				4, 0, 2, 4, 1, 0, 4, 3, 1, 4, 2, 3,
+				7, 1, 3, 7, 5, 1, 7, 6, 5, 7, 3, 6};
 		Mesh mesh = new Mesh(vertices, indices, Type.SOLID, null);
 		return;
 	}
