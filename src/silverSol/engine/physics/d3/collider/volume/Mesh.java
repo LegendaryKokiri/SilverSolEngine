@@ -7,17 +7,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
 
+import silverSol.engine.physics.d3.body.Body;
 import silverSol.engine.physics.d3.collider.Collider;
 import silverSol.engine.physics.d3.collision.Collision;
 import silverSol.engine.physics.d3.det.narrow.algs.SepEdge;
 import silverSol.engine.physics.d3.det.narrow.algs.SepPlane;
+import silverSol.math.VectorMath;
 import silverSol.math.geometry.Triangle;
 
 public class Mesh extends Volume {
 		
 	private Set<Hull> constituents;
+	private float radius;
 	
 	public Mesh(Type collisionType, Object colliderData) {
 		super(collisionType, colliderData);
@@ -27,6 +31,7 @@ public class Mesh extends Volume {
 		super(collisionType, colliderData);
 		this.constituents = new HashSet<>();
 		this.buildHulls(vertices, indices);
+		this.radius = VectorMath.longest(vertices).length();
 	}
 	
 	private void buildHulls(Vector3f[] vertices, int[] indices) {
@@ -192,53 +197,132 @@ public class Mesh extends Volume {
 
 	@Override
 	public Vector3f supportMap(Vector3f globalDirection, boolean global) {
-		// TODO Auto-generated method stub
-		return null;
+		Vector3f meshSupport = null;
+		float meshSupportDistance = 0f;
+		
+		Vector3f localDirection = this.toLocalDirection(globalDirection);
+		
+		for(Hull hull : constituents) {
+			Vector3f hullSupport = hull.supportMap(globalDirection, false);
+			float hullSupportDistance = Vector3f.dot(hullSupport, localDirection);
+			
+			if(hullSupport == null || hullSupportDistance > meshSupportDistance) {
+				meshSupport = hullSupport;
+				meshSupportDistance = hullSupportDistance;
+			}
+		}
+		
+		return global ? this.toGlobalPosition(meshSupport) : meshSupport;
 	}
 
 	@Override
 	public Vector3f[] raycast(Vector3f globalOrigin, Vector3f globalDirection, float maxLength, boolean global) {
-		// TODO Auto-generated method stub
-		return null;
+		Vector3f[] meshIntersection = null;
+		float meshIntersectionDistance = 0f;
+		
+		for(Hull hull : constituents) {
+			Vector3f[] hullIntersection = hull.raycast(globalOrigin, globalDirection, maxLength, true);
+			if(hullIntersection == null) continue;
+			
+			float hullIntersectionDistance = Vector3f.sub(hullIntersection[0], globalOrigin, null).lengthSquared();
+			
+			if(meshIntersection == null || hullIntersectionDistance < meshIntersectionDistance) {
+				meshIntersection = hullIntersection;
+				meshIntersectionDistance = hullIntersectionDistance;
+			}
+		}
+		
+		return meshIntersection;
 	}
 
 	@Override
 	public Collision[] testForCollisions(Volume volume) {
-		// TODO Auto-generated method stub
-		return null;
+		List<Collision> collisions = new ArrayList<>();
+		for(Hull hull : this.constituents) {
+			for(Collision collision : hull.testForCollisions(volume)) {
+				collisions.add(collision);
+			}
+		}
+		
+		return collisions.toArray(new Collision[0]);
 	}
 
 	@Override
 	public Collision[] testForResolutions(Volume volume) {
-		// TODO Auto-generated method stub
-		return null;
+		List<Collision> collisions = new ArrayList<>();
+		for(Hull hull : this.constituents) {
+			for(Collision collision : hull.testForResolutions(volume)) {
+				collisions.add(collision);
+			}
+		}
+		
+		return collisions.toArray(new Collision[0]);
 	}
 
 	@Override
 	public SepPlane[] getSeparatingPlanes(Planar planar) {
-		// TODO Auto-generated method stub
-		return null;
+		List<SepPlane> separatingPlanes = new ArrayList<>();
+		for(Hull hull : this.constituents) {
+			for(SepPlane plane : hull.getSeparatingPlanes(planar)) {
+				separatingPlanes.add(plane);
+			}
+		}
+		
+		return separatingPlanes.toArray(new SepPlane[0]);
 	}
 
 	@Override
 	public SepEdge[] getSeparatingEdges(Planar planar) {
-		// TODO Auto-generated method stub
-		return null;
+		List<SepEdge> separatingEdges = new ArrayList<>();
+		for(Hull hull : this.constituents) {
+			for(SepEdge edge : hull.getSeparatingEdges(planar)) {
+				separatingEdges.add(edge);
+			}
+		}
+		
+		return separatingEdges.toArray(new SepEdge[0]);
 	}
 
 	@Override
 	public Collider clone() {
-		// TODO Auto-generated method stub
-		return null;
+		Mesh copy = new Mesh(this.type, this.colliderData);
+		
+		Set<Hull> constituentCopy = new HashSet<>();
+		for(Hull hull : this.constituents) {
+			constituentCopy.add((Hull) hull.clone());
+		}
+		copy.constituents = constituentCopy;
+		copy.radius = this.radius;
+		
+		return copy;
 	}
 
 	@Override
 	public void calculateEndpoints() {
-		// TODO Auto-generated method stub
-		
+		endpoints[0].value = position.x - radius;
+		endpoints[1].value = position.x + radius;
+		endpoints[2].value = position.y - radius;
+		endpoints[3].value = position.y + radius;
+		endpoints[4].value = position.z - radius;
+		endpoints[5].value = position.z + radius;
 	}
 	
-	@SuppressWarnings("unused")
+	@Override
+	public void setBody(Body body) {
+		super.setBody(body);
+		for(Hull hull : this.constituents) {
+			hull.setBody(body);
+		}
+	}
+	
+	@Override
+	public void setBodyOffset(Matrix4f bodyOffset) {
+		super.setBodyOffset(bodyOffset);
+		for(Hull hull : this.constituents) {
+			hull.setBodyOffset(bodyOffset);
+		}
+	}
+	
 	public static void main(String[] args) {
 		Vector3f[] vertices = new Vector3f[]{
 				new Vector3f(0f, 0f, 0f), new Vector3f(1f, 0f, 0f), new Vector3f(0f, 0f, 1f), new Vector3f(1f, 0f, 1f), new Vector3f(0.5f, 1f, 0.5f),
@@ -246,7 +330,24 @@ public class Mesh extends Volume {
 		int[] indices = new int[] {
 				4, 0, 2, 4, 1, 0, 4, 3, 1, 4, 2, 3,
 				7, 1, 3, 7, 5, 1, 7, 6, 5, 7, 3, 6};
+		
+		Body body = new Body();
+		body.setPosition(new Vector3f(2f, 0f, 2f));
+		
 		Mesh mesh = new Mesh(vertices, indices, Type.SOLID, null);
+		body.addVolume(mesh);
+		
+		System.out.println(mesh.supportMap(new Vector3f(1f, 1f, 1f), true));
+		System.out.println(mesh.supportMap(new Vector3f(1f, 1f, 1f), false));
+		
+		System.out.println(mesh.supportMap(new Vector3f(0.2f, 0f, -1f), true));
+		System.out.println(mesh.supportMap(new Vector3f(0.2f, 0f, -1f), false));
+		
+		System.out.println(mesh.raycast(new Vector3f(3.2f, 2f, 2.5f), new Vector3f(0f, -1f, 0f), 10f, true)[0]);
+		System.out.println(mesh.raycast(new Vector3f(3.2f, 2f, 2.5f), new Vector3f(0f, -1f, 0f), 10f, true)[1]);
+		System.out.println(mesh.raycast(new Vector3f(3.2f, 2f, 2.5f), new Vector3f(0f, -1f, 0f), 10f, false)[0]);
+		System.out.println(mesh.raycast(new Vector3f(3.2f, 2f, 2.5f), new Vector3f(0f, -1f, 0f), 10f, false)[1]);
+		
 		return;
 	}
 
