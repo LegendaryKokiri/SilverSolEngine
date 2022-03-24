@@ -1,7 +1,9 @@
 package silverSol.engine.physics.d3.collider.volume;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -40,6 +42,10 @@ public class Mesh extends Volume {
 			// Decompose mesh and separate hull
 			Set<Triangle> hull = buildHull(faces, adjacencies);
 			
+			List<Vector3f> usedHullVertices = new ArrayList<>();
+			Map<Integer, Integer> hullIndexMap = new HashMap<>();
+			int numHullVertices = 0;
+			
 			// Build constituent hull from triangle set
 			int[] hullIndices = new int[hull.size() * 3];
 			int i = 0;
@@ -47,11 +53,18 @@ public class Mesh extends Volume {
 				// Find starting index and build face
 				int startingIndex = faceIndices.get(face);
 				for(int v = 0; v < 3; v++) {
-					hullIndices[i++] = indices[startingIndex + v];
+					int index = indices[startingIndex + v];
+					
+					if(!hullIndexMap.containsKey(index)) {
+						usedHullVertices.add(vertices[index]);
+						hullIndexMap.put(index, numHullVertices++);
+					}
+					
+					hullIndices[i++] = hullIndexMap.get(index);
 				}
 			}
 			
-			Hull constituent = new Hull(vertices, hullIndices, this.type, null);
+			Hull constituent = new Hull(usedHullVertices.toArray(new Vector3f[0]), hullIndices, this.type, null);
 			constituent.setID(this.ID);
 			this.constituents.add(constituent);
 		}
