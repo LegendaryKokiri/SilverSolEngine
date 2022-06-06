@@ -295,6 +295,7 @@ public class Animator {
 	public void setModelFrame(int modelFrame) {
 		this.modelFrame = Math.max(modelFrame, 0) % modelAnimation.getFrameCount();
 		this.modelTime = this.modelFrame * modelAnimation.getSecondsPerFrame();
+		animateModel(0f);
 	}
 	
 	public boolean modelAnimated() {
@@ -352,6 +353,7 @@ public class Animator {
 	public void setTextureFrame(int textureFrame) {
 		this.textureFrame = Math.max(textureFrame, 0) % textureAnimation.getNumberOfFrames();
 		this.textureTime = ((float) this.textureFrame) * textureAnimation.getSecondsPerFrame();
+		animateTexture(0f);
 	}
 
 	public float[] getTextureFrameBounds() {

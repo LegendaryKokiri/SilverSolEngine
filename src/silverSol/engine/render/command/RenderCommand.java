@@ -4,7 +4,7 @@ import silverSol.engine.entity.Entity;
 import silverSol.engine.render.opengl.object.Fbo;
 import silverSol.engine.render.renderer.Renderer;
 
-public class RenderCommand {
+public class RenderCommand extends RendererCommand {
 
 	private boolean active;
 	private Renderer<? extends Entity> renderer;
@@ -21,12 +21,12 @@ public class RenderCommand {
 		this.renderSettings = renderSettings;
 	}
 	
-	public boolean isActive() {
-		return active;
-	}
-
-	public void setActive(boolean active) {
-		this.active = active;
+	public void execute() {
+		if(!this.active) return;
+		this.targetFbo.bind();
+		renderer.activateShaderProgram(this.shaderProgramIndex);
+		renderer.getActiveShader().setRenderSettings(this.renderSettings);
+		renderer.render();
 	}
 
 	public Renderer<? extends Entity> getRenderer() {

@@ -27,6 +27,7 @@ public class PhysicsEngine3d {
 	//Time Steps
 	private int fps;
 	private float targetDT;
+	private int dtSubdivisions;
 	private int numIterations;
 	
 	//Distance
@@ -49,6 +50,7 @@ public class PhysicsEngine3d {
 	public PhysicsEngine3d(PhysicsSettings physicsSettings) {
 		this.fps = physicsSettings.getFPS();
 		targetDT = 1f / (float) fps;
+		dtSubdivisions = 1;
 		numIterations = 1;
 				
 		unitsPerMeter = 1f;
@@ -255,6 +257,14 @@ public class PhysicsEngine3d {
 		return targetDT;
 	}
 	
+	public int getDTSubdivisions() {
+		return dtSubdivisions;
+	}
+
+	public void setDTSubdivisions(int dtSubdivisions) {
+		this.dtSubdivisions = dtSubdivisions;
+	}
+
 	public int getNumIterations() {
 		return numIterations;
 	}

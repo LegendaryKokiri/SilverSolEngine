@@ -25,7 +25,7 @@ public abstract class Renderer<T extends Entity> {
 		protected int activeShaderProgramIndex;
 	
 	protected List<Vao> vaos;
-	protected List<T> entities;
+	protected List<List<T>> shaderEntities;
 	
 	public Renderer(Camera camera) {
 		this.enabled = true;
@@ -39,7 +39,7 @@ public abstract class Renderer<T extends Entity> {
 		this.activeShaderProgramIndex = 0;
 		
 		this.vaos = new ArrayList<>();
-		this.entities = new ArrayList<>();
+		this.shaderEntities = new ArrayList<>();
 	}
 	
 	public boolean isEnabled() {
@@ -74,11 +74,11 @@ public abstract class Renderer<T extends Entity> {
 			activeShaderProgramIndex = 0;
 			activeShaderProgram = this.shaderPrograms.get(0);
 		}
+		
+		this.shaderEntities.add(new ArrayList<>());
 	}
 	
 	public void activateShaderProgram(int shaderIndex) {
-		if(shaderIndex < 0 || shaderIndex >= this.shaderPrograms.size()) return;
-		
 		this.activeShaderProgramIndex = shaderIndex;
 		this.activeShaderProgram = this.shaderPrograms.get(shaderIndex);
 	}
@@ -100,54 +100,138 @@ public abstract class Renderer<T extends Entity> {
 	}
 	
 	public void progressTime(float dt, float interpolationFactor) {
-		for(T entity : entities) {
-			if(entity.animates()) entity.getAnimator().update(dt);
+		for(int i = 0; i < shaderPrograms.size(); i++) {
+			List<T> entities = shaderEntities.get(i);
+			for(T entity : entities) {
+				if(entity.animates()) entity.getAnimator().update(dt);
+			}
 		}
 	}
 	
 	public List<T> getEntities() {
-		return entities;
+		return getEntities(activeShaderProgramIndex);
+	}
+	
+	public List<T> getEntities(int shaderProgramIndex) {
+		return shaderEntities.get(shaderProgramIndex);
 	}
 	
 	public void addEntity(T entity) {
-		entities.add(entity);		
+		addEntity(entity, activeShaderProgramIndex);
+	}
+	
+	public void addEntity(T entity, int shaderProgramIndex) {
+		shaderEntities.get(shaderProgramIndex).add(entity);		
 		vaos.add(entity.getModel().getVao());
 	}
 	
 	public void addEntities(T[] entities) {
+		addEntities(entities, activeShaderProgramIndex);
+	}
+	
+	public void addEntities(T[] entities, int shaderProgramIndex) {
 		for(T entity : entities) {
-			addEntity(entity);
+			addEntity(entity, shaderProgramIndex);
 		}
 	}
 	
 	public void addEntities(List<T> entities) {
+		addEntities(entities, activeShaderProgramIndex);
+	}
+	
+	public void addEntities(List<T> entities, int shaderProgramIndex) {
 		for(T entity : entities) {
-			addEntity(entity);
+			addEntity(entity, shaderProgramIndex);
+		}
+	}
+	
+	public void setEntities(T[] entities) {
+		setEntities(entities, activeShaderProgramIndex);
+	}
+	
+	public void setEntities(T[] entities, int shaderProgramIndex) {
+		this.shaderEntities.get(shaderProgramIndex).clear();
+		for(T entity : entities) {
+			addEntity(entity, shaderProgramIndex);
 		}
 	}
 	
 	public void setEntities(List<T> entities) {
-		this.entities = entities;
+		setEntities(entities, activeShaderProgramIndex);
+	}
+	
+	public void setEntities(List<T> entities, int shaderProgramIndex) {
+		this.shaderEntities.get(shaderProgramIndex).clear();
+		for(T entity : entities) {
+			addEntity(entity, shaderProgramIndex);
+		}
 	}
 	
 	public List<Vao> getVaos() {
 		return vaos;
 	}
 
-	protected abstract void preRender();
-	protected abstract void preInstance(T entity, int index);
-	public abstract void render();
-	protected abstract void postInstance(T entity, int index);
-	protected abstract void postRender();
+	protected void preRender() {
+		activeShaderProgram.start();
+		activeShaderProgram.preRender(camera, shaderEntities.get(activeShaderProgramIndex));
+	}
+
+	protected void preInstance(T entity, int index) {
+		entity.getModel().getVao().bind();
+		activeShaderProgram.preInstance(camera, entity, index);
+		activeShaderProgram.enableAttributes();
+		activeShaderProgram.bindTextures(entity.getModel().getTextures());
+	}
 	
-	public abstract void removeEntity(int index);
-	public abstract void removeEntity(T entity);
-	@SuppressWarnings("unchecked")
-	public abstract void removeEntities(T... entities);
-	public abstract void removeEntities(Collection<T> entities);
+	public abstract void render();
+	
+	protected void postInstance(T entity, int index) {
+		activeShaderProgram.postInstance(camera, entity, index);
+	}
+	
+	protected void postRender() {
+		activeShaderProgram.postRender(camera, shaderEntities.get(activeShaderProgramIndex));
+		
+		Vao.unbindVao();
+		activeShaderProgram.stop();
+	}
+	
+	public void removeEntity(int index) {
+		shaderEntities.get(activeShaderProgramIndex).remove(index);
+	}
+	
+	public void removeEntity(T entity) {
+		shaderEntities.get(activeShaderProgramIndex).remove(entity);
+	}
+
+	public void removeEntities(T[] entities) {
+		removeEntities(entities, activeShaderProgramIndex);
+	}
+	
+	public void removeEntities(T[] entities, int shaderProgramIndex) {
+		for(T entity : entities) this.shaderEntities.get(shaderProgramIndex).remove(entity);
+	}
+	
+	public void removeEntities(Collection<T> entities) {
+		removeEntities(entities, activeShaderProgramIndex);
+	}
+
+	public void removeEntities(Collection<T> entities, int shaderProgramIndex) {
+		this.shaderEntities.get(shaderProgramIndex).removeAll(entities);
+	}
 	
 	public void clearEntities() {
-		entities.clear();
+		clearEntities(activeShaderProgramIndex);
+	}
+	
+	public void clearEntities(int shaderProgramIndex) {
+		shaderEntities.get(shaderProgramIndex).clear();
+	}
+	
+	public void clearAllEntities() {
+		for(List<T> entities : shaderEntities) {
+			entities.clear();
+		}
 	}
 	
 	public void cleanUp() {

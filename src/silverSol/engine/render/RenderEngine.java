@@ -7,9 +7,10 @@ import org.lwjgl.LWJGLException;
 
 import silverSol.engine.entity.Entity;
 import silverSol.engine.render.command.RenderCommand;
+import silverSol.engine.render.command.RendererCommand;
 import silverSol.engine.render.renderer.Renderer;
 import silverSol.engine.settings.RenderSettings;
-import silverSol.utils.structures.Queue;
+import silverSol.utils.structs.Queue;
 
 
 public class RenderEngine {
@@ -17,7 +18,7 @@ public class RenderEngine {
 	protected MasterRenderer masterRenderer;
 	
 	private List<Renderer<? extends Entity>> renderers;
-	private Queue<RenderCommand> renderCommands;
+	private Queue<RendererCommand> rendererCommands;
 	
 	private int fps;
 	private float targetDT;
@@ -35,27 +36,30 @@ public class RenderEngine {
 		masterRenderer = new MasterRenderer(70f, 0.1f, 2000f);
 		
 		renderers = new ArrayList<>();
-		renderCommands = new Queue<>();
+		rendererCommands = new Queue<>();
 	}
 	
 	public void init() {
 		
 	}
 	
-	public void addRenderCommand(RenderCommand renderCommand) {
-		Renderer<? extends Entity> renderer = renderCommand.getRenderer();
-		if(!renderers.contains(renderer)) renderers.add(renderer);
-		if(!masterRenderer.contains(renderCommand.getTargetFbo())) masterRenderer.addFbo(renderCommand.getTargetFbo());
+	public void addRendererCommand(RendererCommand rendererCommand) {
+		if(rendererCommand instanceof RenderCommand) {
+			RenderCommand renderCommand = (RenderCommand) rendererCommand;
+			Renderer<? extends Entity> renderer = renderCommand.getRenderer();
+			if(!renderers.contains(renderer)) renderers.add(renderer);
+			if(!masterRenderer.contains(renderCommand.getTargetFbo())) masterRenderer.addFbo(renderCommand.getTargetFbo());
+		}
 		
-		renderCommands.enqueue(renderCommand);
+		rendererCommands.enqueue(rendererCommand);
 	}
 	
-	public void clearRenderCommands() {
-		renderCommands.clear();
+	public void clearRendererCommands() {
+		rendererCommands.clear();
 	}
 	
 	public void render() throws LWJGLException {
-		masterRenderer.renderScene(renderCommands);
+		masterRenderer.renderScene(rendererCommands);
 		displayManager.updateDisplay();
 	}
 	

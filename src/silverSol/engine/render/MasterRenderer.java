@@ -10,10 +10,10 @@ import org.lwjgl.opengl.GL30;
 import org.lwjgl.util.vector.Vector4f;
 
 import silverSol.engine.entity.Entity;
-import silverSol.engine.render.command.RenderCommand;
+import silverSol.engine.render.command.RendererCommand;
 import silverSol.engine.render.opengl.object.Fbo;
 import silverSol.engine.render.renderer.Renderer;
-import silverSol.utils.structures.Queue;
+import silverSol.utils.structs.Queue;
 
 public class MasterRenderer {
 	
@@ -30,16 +30,11 @@ public class MasterRenderer {
 		clearColor = new Vector4f(0, 0, 0, 0);
 	}
 	
-	public void renderScene(Queue<RenderCommand> renderCommands) {
+	public void renderScene(Queue<RendererCommand> rendererCommands) {
 		clearRenderTargets(clearColor);
 		
-		for(RenderCommand renderCommand : renderCommands) {
-			if(!renderCommand.isActive()) continue;
-			Renderer<? extends Entity> renderer = renderCommand.getRenderer();
-			renderCommand.getTargetFbo().bind();
-			renderer.activateShaderProgram(renderCommand.getShaderProgramIndex());
-			renderer.getActiveShader().setRenderSettings(renderCommand.getRenderSettings());
-			renderer.render();
+		for(RendererCommand rendererCommand : rendererCommands) {
+			if(rendererCommand.isActive()) rendererCommand.execute();
 		}
 	}
 	
@@ -85,6 +80,10 @@ public class MasterRenderer {
 		this.clearColor = clearColor;
 	}
 	
+	/*
+	 * TODO: I don't think we want this done automatically.
+	 * Bring Pathforger's GlClearColorCommand over here and let the client call it, then get rid of this.
+	 */
 	private void clearRenderTargets(Vector4f clearColor) {
 		Set<Integer> fboIDs = fbos.keySet();
 		for(int fboID : fboIDs) {

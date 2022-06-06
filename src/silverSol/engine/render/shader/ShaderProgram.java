@@ -105,13 +105,13 @@ public abstract class ShaderProgram<T extends Entity> {
 		GL20.glUseProgram(programID);
 	}
 	
-	public void enableAttribues() {
+	public void enableAttributes() {
 		for(int i = 0; i < numberOfAttributeBindLocations; i++) {
 			GL20.glEnableVertexAttribArray(i);
 		}
 	}
 		
-	public void disableAttribues(T entity) {
+	public void disableAttributes(T entity) {
 		for(int i = 0; i < numberOfAttributeBindLocations; i++) {
 			GL20.glDisableVertexAttribArray(i);
 		}

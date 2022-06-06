@@ -66,27 +66,28 @@ public class TextModelBuilder {
 	private static Model createQuad(TextGui textGui, List<Line> lines) {
 		textGui.setNumberOfLines(lines.size());
 		
-		float cursorX = 0f, cursorY = 0f;
-		List<Float> vertices = new ArrayList<>(), textureCoordinates = new ArrayList<>();
+		Vector2f cursor = new Vector2f();
+		List<Float> vertices = new ArrayList<>();
+		List<Float> textureCoordinates = new ArrayList<>();
 		
 		float fontSize = textGui.getFontSize();
 		for(Line line : lines) {
 			if(textGui.isCentered()) {
-				cursorX = (line.getMaxScreenspaceWidth() - line.getCurrentScreenspaceWidth()) / 2f;
+				cursor.x = (line.getMaxScreenspaceWidth() - line.getCurrentScreenspaceWidth()) / 2f;
 			}
 			
 			for(Word word : line.getWords()) {
 				for(Character character : word.getCharacters()) {
-					addCharacterVertices(vertices, character, cursorX, cursorY, fontSize);
+					addCharacterVertices(vertices, character, cursor.x, cursor.y, fontSize);
 					addData(textureCoordinates, character.getMinTextureCoordinates(), character.getMaxTextureCoordinates());
-					cursorX += character.getXAdvancement() * fontSize;						
+					cursor.x += character.getXAdvancement() * fontSize;						
 				}
 				
-				cursorX += textGui.getFont().getSpaceWidth() * fontSize;
+				cursor.x += textGui.getFont().getSpaceWidth() * fontSize;
 			}
 			
-			cursorX = 0;
-			cursorY += LINE_HEIGHT * fontSize;
+			cursor.x = 0;
+			cursor.y += LINE_HEIGHT * fontSize;
 		}
 		
 		float[] vertexArray = new float[vertices.size()];

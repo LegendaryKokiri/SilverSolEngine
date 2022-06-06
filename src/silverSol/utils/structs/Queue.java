@@ -1,4 +1,4 @@
-package silverSol.utils.structures;
+package silverSol.utils.structs;
 
 import java.util.Iterator;
 

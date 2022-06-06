@@ -249,10 +249,9 @@ public class Landscape extends Volume {
 		return c;
 	}
 	
-	//TODO: Why isn't this using SAT? Yowza, this is terrifying...
 	private Collision testCollision(Volume volume, Planar planar) {
 		if(planar == null) return null;
-		return GJK.detect(planar, volume);
+		return SAT.run(planar, volume);
 	}
 	
 	private Collision testResolution(Volume volume, Planar planar) {

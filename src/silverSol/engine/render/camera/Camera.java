@@ -57,6 +57,14 @@ public class Camera extends Entity {
 		calculateProjectionMatrix();
 	}
 	
+	public void translate(float x, float y, float z) {
+		body3d.translate(x, y, z);
+	}
+	
+	public void translate(Vector3f translation) {
+		body3d.translate(translation);
+	}
+	
 	public void setPosition(float x, float y, float z) {
 		body3d.setPosition(x, y, z);
 	}
