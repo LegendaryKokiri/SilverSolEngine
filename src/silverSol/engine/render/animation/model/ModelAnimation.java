@@ -1,5 +1,6 @@
 package silverSol.engine.render.animation.model;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,9 +18,10 @@ public class ModelAnimation {
 	private int frameCount;
 	private float secondsPerFrame;
 	private float timeLength;
-	
-	//Takes in the bone's index and returns the keyframes associated with that bone.
-	private Map<Integer, List<Keyframe>> keyframes;
+
+	//Keyframes
+	private Map<Integer, List<Keyframe>> keyframes; // Given a bone index, return keyframes associated with that bone
+	private Map<Integer, Map<Keyframe, Keyframe>> nextKeyframes; // Given a bone index, get a map from each keyframe to the next chronological keyframe
 	
 	public ModelAnimation(String name, int frameCount, float secondsPerFrame, Map<Integer, List<Keyframe>> keyframes) {
 		this.name = name;
@@ -33,6 +35,18 @@ public class ModelAnimation {
 		this.timeLength = (float)(frameCount) * secondsPerFrame;
 		
 		this.keyframes = keyframes;
+		
+		this.nextKeyframes = new HashMap<>();
+		for(Integer boneIndex : this.keyframes.keySet()) {
+			List<Keyframe> boneFrames = this.keyframes.get(boneIndex);
+			
+			Map<Keyframe, Keyframe> next = new HashMap<>();
+			for(int i = 0; i < boneFrames.size(); i++) {
+				next.put(boneFrames.get(i), boneFrames.get((i+1) % boneFrames.size()));
+			}
+			
+			this.nextKeyframes.put(boneIndex, next);
+		}
 	}
 	
 	public String getName() {
@@ -78,22 +92,36 @@ public class ModelAnimation {
 	public float getTimeLength() {
 		return timeLength;
 	}
-
-	public Map<Integer, List<Keyframe>> getKeyframes() {
-		return keyframes;
+	
+	public Keyframe getKeyframe(int boneIndex, int keyframeIndex) {
+		return keyframes.get(boneIndex).get(keyframeIndex);
 	}
 	
-	public List<Keyframe> getKeyframes(int boneIndex) {
-		return keyframes.get(boneIndex);
-	}
-	
-	public Keyframe[] getActiveKeyframes(int boneIndex, float currentFrame) {
+	public Keyframe getKeyframe(int boneIndex, float time) {
 		List<Keyframe> boneKeyframes = keyframes.get(boneIndex);
+		int currentIndex = this.getCurrentKeyframeIndex(boneKeyframes, time);
+		return boneKeyframes.get(currentIndex);
+	}
+	
+	public Keyframe getNextKeyframe(int boneIndex, Keyframe keyframe) {
+		if(this.nextKeyframes.containsKey(boneIndex)) return this.nextKeyframes.get(boneIndex).get(keyframe);
+		return null;
+	}
+	
+	/**
+	 * Gets the keyframe in the given list corresponding to the given time
+	 * Times less than zero will clamp to keyframe zero, and times greater than
+	 * the animation's total time will clamp to the final keyframe
+	 * @param keyframes The list of keyframes to evaluate
+	 * @param currentTime The time of the current model animation
+	 * @return The keyframe in the list that is active at the given time
+	 */
+	private int getCurrentKeyframeIndex(List<Keyframe> keyframes, float currentTime) {	
+		for(int i = keyframes.size() - 1; i >= 0; i--) {
+			if(currentTime > keyframes.get(i).getTime()) return i;
+		}
 		
-		int currentIndex = Keyframe.getCurrentKeyframeIndex(boneKeyframes, currentFrame);
-		int nextIndex = (currentIndex == boneKeyframes.size() - 1) ? ((oughtLoop) ? 0 : currentIndex) : currentIndex + 1; 
-		
-		return new Keyframe[]{boneKeyframes.get(currentIndex), boneKeyframes.get(nextIndex)};
+		return 0;
 	}
 	
 	@Override

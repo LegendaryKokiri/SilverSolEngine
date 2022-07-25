@@ -2,8 +2,10 @@ package silverSol.engine.render.armature;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.lwjgl.util.vector.Matrix4f;
 
@@ -76,6 +78,17 @@ public class Bone {
 		}
 		
 		return null;
+	}
+	
+	public Set<Integer> getBoneIndices() {
+		Set<Integer> boneIndices = new HashSet<>();
+		this.getBoneIndices(boneIndices);
+		return boneIndices;
+	}
+	
+	private void getBoneIndices(Set<Integer> dest) {
+		dest.add(this.index);
+		for(Bone child : children) child.getBoneIndices(dest);
 	}
 
 	public void setIndex(int index) {

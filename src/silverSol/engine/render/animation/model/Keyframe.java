@@ -1,7 +1,5 @@
 package silverSol.engine.render.animation.model;
 
-import java.util.List;
-
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Quaternion;
 import org.lwjgl.util.vector.Vector3f;
@@ -16,7 +14,6 @@ public class Keyframe {
 	private Vector3f position;
 	private Quaternion quaternion;
 	private Vector3f scale;
-	private Matrix4f localTransformationMatrix;
 	
 	public Keyframe(int frame, float fps, Vector3f position, Matrix4f rotation, Vector3f scale) {		
 		this.frame = frame;
@@ -24,13 +21,7 @@ public class Keyframe {
 		
 		this.position = position;
 		this.quaternion = Quaternion.setFromMatrix(rotation, null);
-		this.scale = scale;
-		
-		this.localTransformationMatrix = new Matrix4f();
-			localTransformationMatrix.translate(position);
-			Matrix4f.mul(localTransformationMatrix, rotation, localTransformationMatrix);
-			Matrix4f.scale(scale, localTransformationMatrix, localTransformationMatrix);
-			
+		this.scale = scale;	
 	}
 	
 	public Keyframe(int frame, float fps, Vector3f position, Quaternion quaternion, Vector3f scale) {		
@@ -60,14 +51,6 @@ public class Keyframe {
 	
 	public Vector3f getScale() {
 		return scale;
-	}
-	
-	public static int getCurrentKeyframeIndex(List<Keyframe> keyframes, float currentTime) {	
-		for(int i = keyframes.size() - 1; i >= 0; i--) {
-			if(currentTime > keyframes.get(i).getTime()) return i;
-		}
-		
-		return 0;
 	}
 	
 	public static float getProximityToNextFrame(Keyframe currentFrame, Keyframe nextFrame, float currentTime, float animationTimeLength) {
