@@ -1,5 +1,6 @@
 package silverSol.utils.structs;
 
+import java.util.Collection;
 import java.util.Iterator;
 
 public class Queue<T> implements Iterable<T> {
@@ -38,6 +39,18 @@ public class Queue<T> implements Iterable<T> {
 		}
 		
 		size++;
+	}
+	
+	public void enqueue(T[] items) {
+		for(T item : items) enqueue(item);
+	}
+	
+	public void enqueue(Collection<T> items) {
+		for(T item : items) enqueue(item);
+	}
+	
+	public void enqueue(Queue<T> items) {
+		for(T item : items) enqueue(item);
 	}
 	
 	public T peek() {

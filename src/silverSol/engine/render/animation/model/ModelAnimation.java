@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 public class ModelAnimation {
-	
+		
 	//Metadata
 	private String name;
 	private boolean transition;
